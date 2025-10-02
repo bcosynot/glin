@@ -45,13 +45,13 @@ jobs:
           if [ -f coverage.xml ]; then
             pip install coverage
             python - <<'PY'
-import xml.etree.ElementTree as ET
-root = ET.parse('coverage.xml').getroot()
-# Cobertura format total metrics
-metrics = root.find('.//coverage') or root
-lines_valid = int(metrics.attrib.get('lines-valid') or metrics.attrib.get('linesValid') or 0)
-lines_covered = int(metrics.attrib.get('lines-covered') or metrics.attrib.get('linesCovered') or 0)
-percent = (lines_covered / lines_valid * 100) if lines_valid else 0.0
-print(f"### Coverage Summary\n\nLines covered: {lines_covered}/{lines_valid} ({percent:.1f}%)")
-PY
+            import xml.etree.ElementTree as ET
+            root = ET.parse('coverage.xml').getroot()
+            # Cobertura format total metrics
+            metrics = root.find('.//coverage') or root
+            lines_valid = int(metrics.attrib.get('lines-valid') or metrics.attrib.get('linesValid') or 0)
+            lines_covered = int(metrics.attrib.get('lines-covered') or metrics.attrib.get('linesCovered') or 0)
+            percent = (lines_covered / lines_valid * 100) if lines_valid else 0.0
+            print(f"### Coverage Summary\n\nLines covered: {lines_covered}/{lines_valid} ({percent:.1f}%)")
+            PY
           fi
