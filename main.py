@@ -1,4 +1,5 @@
 import subprocess
+
 from fastmcp import FastMCP
 
 mcp = FastMCP("Glin - Your worklog, without the work")

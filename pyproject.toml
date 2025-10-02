@@ -7,3 +7,41 @@ requires-python = ">=3.13"
 dependencies = [
     "fastmcp>=2.12.4",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.13.2",
+]
+
+[tool.ruff]
+# Match the configured Python version
+target-version = "py313"
+# Keep lines readable while accommodating typical comments and URLs
+line-length = 100
+# Project source roots (ruff uses this to resolve imports and autofixes)
+src = ["."]
+# Avoid scanning lockfiles or other generated artifacts
+extend-exclude = ["uv.lock"]
+
+[tool.ruff.lint]
+# A lean, common-sense rule set: pycodestyle (E/W), Pyflakes (F), isort (I),
+# pyupgrade (UP), and some bugbear checks (B)
+select = ["E", "W", "F", "I", "UP", "B"]
+# Add ignores here if any rule is too noisy for this codebase
+ignore = []
+# Allow Ruff to fix everything it knows how to
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+# Treat this project as first-party for import sorting
+known-first-party = ["glin"]
+combine-as-imports = true
+
+[tool.ruff.format]
+# Enable Ruff's formatter with opinionated but widely-used defaults
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+# Format code blocks inside docstrings as well
+docstring-code-format = true
