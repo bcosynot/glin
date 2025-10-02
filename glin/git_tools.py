@@ -37,7 +37,6 @@ def _get_git_author_pattern() -> Optional[str]:
     return name or None
 
 
-@mcp.tool
 def get_recent_commits(count: int = 10) -> list[dict]:
     """
     Get recent git commits from the current repository.
@@ -83,7 +82,6 @@ def get_recent_commits(count: int = 10) -> list[dict]:
         return [{"error": f"Failed to get commits: {str(e)}"}]
 
 
-@mcp.tool
 def get_commits_by_date(since: str, until: str = "now") -> list[dict]:
     """
     Get git commits within a specific date range.
@@ -128,3 +126,15 @@ def get_commits_by_date(since: str, until: str = "now") -> list[dict]:
         return [{"error": f"Git command failed: {e.stderr}"}]
     except Exception as e:
         return [{"error": f"Failed to get commits: {str(e)}"}]
+
+
+
+# Register MCP tool wrappers preserving public names
+@mcp.tool(name="get_recent_commits")
+def _tool_get_recent_commits(count: int = 10) -> list[dict]:  # pragma: no cover
+    return get_recent_commits(count=count)
+
+
+@mcp.tool(name="get_commits_by_date")
+def _tool_get_commits_by_date(since: str, until: str = "now") -> list[dict]:  # pragma: no cover
+    return get_commits_by_date(since=since, until=until)

@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Pre-commit hook to auto-format and lint with Ruff using uv
+# - Formats code
+# - Applies autofixes
+# - Stages any changes so the commit includes them
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo "[pre-commit] 'uv' is not installed or not on PATH. Please install uv (https://docs.astral.sh/uv/) and run 'uv sync --group dev'." >&2
+  exit 1
+fi
+
+echo "[pre-commit] Running: uv run ruff format"
+uv run ruff format
+
+echo "[pre-commit] Running: uv run ruff check --fix"
+uv run ruff check --fix
+
+# Stage any changes made by Ruff so the commit proceeds with formatted/fixed files
+if command -v git >/dev/null 2>&1; then
+  git add -A
+fi
+
+exit 0

@@ -6,7 +6,6 @@ from pathlib import Path
 from .mcp_app import mcp
 
 
-@mcp.tool
 def append_to_markdown(content: str, file_path: str | None = None) -> dict:
     """
     Append lines as bullet points under a date heading in a markdown file.
@@ -157,3 +156,10 @@ def append_to_markdown(content: str, file_path: str | None = None) -> dict:
         }
     except Exception as e:
         return {"error": f"Failed to append to markdown: {e}"}
+
+
+
+# Register MCP tool wrapper preserving the public name
+@mcp.tool(name="append_to_markdown")
+def _tool_append_to_markdown(content: str, file_path: str | None = None) -> dict:  # pragma: no cover
+    return append_to_markdown(content=content, file_path=file_path)
