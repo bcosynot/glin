@@ -1,4 +1,6 @@
+import os
 import subprocess
+from pathlib import Path
 
 from fastmcp import FastMCP
 
@@ -127,6 +129,72 @@ def get_commits_by_date(since: str, until: str = "now") -> list[dict]:
         return [{"error": f"Git command failed: {e.stderr}"}]
     except Exception as e:
         return [{"error": f"Failed to get commits: {str(e)}"}]
+
+
+@mcp.tool
+def append_to_markdown(content: str, file_path: str | None = None) -> dict:
+    """
+    Append text to a markdown file at a default or configured location.
+
+    Behavior:
+    - If file_path is provided, append to that path (relative or absolute). Parents will be created.
+    - Otherwise, use the environment variable GLIN_MD_PATH if set.
+    - If neither is provided, default to ./WORKLOG.md in the repository root.
+
+    Args:
+        content: The text to append. Must be non-empty (after stripping). Newlines will be normalized.
+        file_path: Optional target file path. Can be absolute or relative to the repo root.
+
+    Returns:
+        A dict with operation details or an error message.
+    """
+    try:
+        if content is None or str(content).strip() == "":
+            return {"error": "content is required and cannot be empty"}
+
+        # Resolve target path: parameter > env var > default
+        target = file_path or os.getenv("GLIN_MD_PATH") or "WORKLOG.md"
+        path = Path(target)
+        if not path.is_absolute():
+            path = Path.cwd() / path
+
+        # Ensure parent directory exists
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Normalize line endings and ensure a trailing newline
+        text = str(content)
+        # Convert Windows newlines to Unix to keep file consistent
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
+        if not text.endswith("\n"):
+            text = text + "\n"
+
+        # If file exists and does not end with a newline, add one separator
+        needs_leading_newline = False
+        if path.exists() and path.stat().st_size > 0:
+            try:
+                with path.open("rb") as f:
+                    f.seek(-1, 2)  # Seek to last byte
+                    last_byte = f.read(1)
+                    if last_byte != b"\n":
+                        needs_leading_newline = True
+            except OSError:
+                # If file is tiny or some OS error, fall back to a safe behavior
+                needs_leading_newline = True
+
+        to_write = ("\n" if needs_leading_newline else "") + text
+
+        with path.open("a", encoding="utf-8", newline="\n") as f:
+            written = f.write(to_write)
+
+        return {
+            "ok": True,
+            "path": str(path),
+            "bytes_written": written,
+            "used_env": file_path is None and bool(os.getenv("GLIN_MD_PATH")),
+            "defaulted": file_path is None and os.getenv("GLIN_MD_PATH") is None,
+        }
+    except Exception as e:
+        return {"error": f"Failed to append to markdown: {e}"}
 
 
 if __name__ == "__main__":
