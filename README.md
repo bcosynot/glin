@@ -30,11 +30,47 @@ Think of it as a **black box recorder for your dev work**: light, ambient, and s
 ### ⚡ Key Features
 - **Transparent logging**: Captures coding activity without interrupting your flow
 - **Git + AI context**: Merges commit history with assistant interactions
+- **Flexible email tracking**: Configure multiple email addresses to track commits from
 - **Human-friendly summaries**: Turn messy traces into readable narratives
 - **MCP-native**: Integrates with any client that speaks MCP
 - **Privacy-first**: You control what gets logged, stored, or shared
 
 
+
+---
+
+### ⚙️ Configuration
+
+Glin supports multiple ways to configure which email addresses to track commits from:
+
+#### 1. Environment Variable (Highest Priority)
+Set the `GLIN_TRACK_EMAILS` environment variable with a comma-separated list of emails:
+```bash
+export GLIN_TRACK_EMAILS="user1@example.com,user2@example.com,team@company.com"
+```
+
+#### 2. Configuration File
+Create a `glin.toml` file in one of these locations:
+- Current directory: `./glin.toml`
+- User config: `~/.config/glin/glin.toml`
+- User home: `~/.glin.toml`
+
+Example `glin.toml`:
+```toml
+# Glin Configuration
+# List of email addresses to track commits from
+track_emails = ["user1@example.com", "user2@example.com", "team@company.com"]
+```
+
+#### 3. Git Configuration (Fallback)
+If no explicit configuration is found, Glin falls back to your git configuration:
+- `git config user.email` (preferred)
+- `git config user.name` (if email not set)
+
+#### MCP Tools for Configuration
+Glin provides MCP tools to manage email configuration:
+- `get_tracked_email_config`: View current configuration
+- `configure_tracked_emails`: Set email addresses via environment variable or config file
 
 ---
 
