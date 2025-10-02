@@ -90,4 +90,8 @@ def get_commits_by_date(since: str, until: str = "now") -> list[dict]:
 
 
 if __name__ == "__main__":
-    mcp.run()
+    import sys
+    if "--transport" in sys.argv and "http" in sys.argv:
+        mcp.run(transport="http", port=8000)
+    else:
+        mcp.run()
