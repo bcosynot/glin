@@ -43,29 +43,43 @@ This project uses pytest with coverage configured in pyproject.toml. You can run
 
 Prerequisites:
 - Python 3.13+
-- One of:
-  - uv (recommended)
-  - or a Python virtual environment with pytest installed
+- uv (recommended)
 
-Using uv (recommended):
-1) Install dev dependencies:
+Install dependencies with uv:
+1) Install uv if you don't have it yet: https://docs.astral.sh/uv/
+2) Sync project and dev dependencies:
    uv sync --group dev
-2) Run tests:
-   make test
-   # or directly
-   uv run pytest
 
-Using pip/venv:
-1) Create and activate a virtual environment, then install deps:
-   python -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   pip install -e .
-   pip install pytest pytest-cov
-2) Run tests:
+Run tests:
+- Using Makefile:
    make test
-   # or directly
-   pytest
+- Or directly with uv:
+   uv run pytest
 
 Notes:
 - Coverage is enabled by default via pyproject addopts and will print a summary to the terminal and write coverage.xml in the repo root.
 - Tests live under the tests/ directory and follow the patterns test_*.py or *_test.py.
+
+---
+
+### 🧰 Developer tooling (Ruff + Git hook)
+This repository includes a Git pre-commit hook that auto-formats code and applies Ruff autofixes using uv.
+
+Set up the hook once per clone:
+1) Ensure dependencies are installed:
+   uv sync --group dev
+2) Point Git to the repo-managed hooks and make the hook executable:
+   make hooks
+   # Equivalent to:
+   # git config core.hooksPath .githooks
+   # chmod +x .githooks/pre-commit
+
+What the hook does:
+- Runs: `uv run ruff format`
+- Runs: `uv run ruff check --fix`
+- Stages any changes so your commit includes the fixes
+
+Run tooling manually if needed:
+- Format: `make format` or `uv run ruff format`
+- Lint (with fixes): `make lint` or `uv run ruff check --fix`
+- Install deps: `make sync` or `uv sync --group dev`
