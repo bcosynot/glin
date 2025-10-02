@@ -5,6 +5,37 @@ from fastmcp import FastMCP
 mcp = FastMCP("Glin - Your worklog, without the work")
 
 
+def _get_git_author_pattern() -> str | None:
+    """
+    Return the git-configured author pattern to filter commits.
+    Prefers user.email; falls back to user.name. Returns None if neither is set.
+    """
+    try:
+        email = subprocess.run(
+            ["git", "config", "--get", "user.email"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    except subprocess.CalledProcessError:
+        email = ""
+
+    if email:
+        return email
+
+    try:
+        name = subprocess.run(
+            ["git", "config", "--get", "user.name"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    except subprocess.CalledProcessError:
+        name = ""
+
+    return name or None
+
+
 @mcp.tool
 def get_recent_commits(count: int = 10) -> list[dict]:
     """
@@ -18,10 +49,14 @@ def get_recent_commits(count: int = 10) -> list[dict]:
     """
     try:
         # Format: hash|author|date|message
+        author = _get_git_author_pattern()
+        if not author:
+            return [{"error": "Git author not configured. Please set user.email or user.name"}]
         result = subprocess.run(
             [
                 "git", "log",
                 f"-{count}",
+                f"--author={author}",
                 "--pretty=format:%H|%an|%ai|%s"
             ],
             capture_output=True,
@@ -60,11 +95,15 @@ def get_commits_by_date(since: str, until: str = "now") -> list[dict]:
         List of commit dictionaries with hash, author, date, and message
     """
     try:
+        author = _get_git_author_pattern()
+        if not author:
+            return [{"error": "Git author not configured. Please set user.email or user.name"}]
         result = subprocess.run(
             [
                 "git", "log",
                 f"--since={since}",
                 f"--until={until}",
+                f"--author={author}",
                 "--pretty=format:%H|%an|%ai|%s"
             ],
             capture_output=True,
