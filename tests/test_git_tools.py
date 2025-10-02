@@ -185,3 +185,76 @@ def test_get_commits_handles_subprocess_error(monkeypatch):
 
     res = get_recent_commits(3)
     assert res and "error" in res[0]
+
+
+def test_get_recent_commits_handles_general_exception(monkeypatch):
+    import subprocess
+
+    email_ok = Completed(stdout="me@example.com\n")
+    
+    def failing_run(*args, **kwargs):
+        if args[0][:3] == ["git", "config", "--get"]:
+            return email_ok
+        raise RuntimeError("Something went wrong")
+
+    monkeypatch.setattr(subprocess, "run", failing_run)
+
+    res = get_recent_commits(3)
+    assert res and "error" in res[0]
+    assert "Failed to get commits" in res[0]["error"]
+
+
+def test_get_commits_by_date_handles_subprocess_error(monkeypatch):
+    import subprocess
+
+    email_ok = Completed(stdout="me@example.com\n")
+    cp_err = subprocess.CalledProcessError(128, ["git", "log"], output="", stderr="fatal: bad stuff")
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        make_run([
+            (["git", "config", "--get", "user.email"], email_ok),
+            (["git", "log"], cp_err),
+        ]),
+    )
+
+    res = get_commits_by_date("yesterday", "now")
+    assert res and "error" in res[0]
+
+
+def test_get_commits_by_date_handles_general_exception(monkeypatch):
+    import subprocess
+
+    email_ok = Completed(stdout="me@example.com\n")
+    
+    def failing_run(*args, **kwargs):
+        if args[0][:3] == ["git", "config", "--get"]:
+            return email_ok
+        raise RuntimeError("Something went wrong")
+
+    monkeypatch.setattr(subprocess, "run", failing_run)
+
+    res = get_commits_by_date("yesterday", "now")
+    assert res and "error" in res[0]
+    assert "Failed to get commits" in res[0]["error"]
+
+
+def test_get_commits_by_date_no_author_config(monkeypatch):
+    import subprocess
+
+    cp_err_email = subprocess.CalledProcessError(1, ["git", "config", "--get", "user.email"], output="", stderr="")
+    cp_err_name = subprocess.CalledProcessError(1, ["git", "config", "--get", "user.name"], output="", stderr="")
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        make_run([
+            (["git", "config", "--get", "user.email"], cp_err_email),
+            (["git", "config", "--get", "user.name"], cp_err_name),
+        ]),
+    )
+
+    res = get_commits_by_date("yesterday", "now")
+    assert res and "error" in res[0]
+    assert "Git author not configured" in res[0]["error"]
