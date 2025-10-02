@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from glin.git_tools import _get_git_author_pattern, get_recent_commits, get_commits_by_date
+from glin.git_tools import _get_author_filters, get_recent_commits, get_commits_by_date, get_tracked_email_config, configure_tracked_emails
 
 
 class FakeCPError(Exception):
@@ -35,63 +35,28 @@ def make_run(outputs: list[tuple[list[str], Completed | Exception]]):
     return run
 
 
-def test_get_git_author_prefers_email(monkeypatch):
-    import subprocess
-
-    # Mock: email present
-    email_ok = Completed(stdout="user@example.com\n")
-    monkeypatch.setattr(
-        subprocess,
-        "run",
-        make_run([
-            (["git", "config", "--get", "user.email"], email_ok),
-        ]),
-    )
-
-    assert _get_git_author_pattern() == "user@example.com"
+def test_get_author_filters_from_config(monkeypatch):
+    """Test that _get_author_filters uses the configuration system."""
+    from unittest.mock import patch
+    
+    with patch('glin.git_tools.get_tracked_emails', return_value=['user1@example.com', 'user2@example.com']):
+        filters = _get_author_filters()
+        assert filters == ['user1@example.com', 'user2@example.com']
 
 
-def test_get_git_author_falls_back_to_name(monkeypatch):
-    import subprocess
-
-    # email lookup fails, name returns
-    cp_err = subprocess.CalledProcessError(1, ["git", "config", "--get", "user.email"], output="", stderr="")
-    name_ok = Completed(stdout="Jane Doe\n")
-
-    monkeypatch.setattr(
-        subprocess,
-        "run",
-        make_run([
-            (["git", "config", "--get", "user.email"], cp_err),
-            (["git", "config", "--get", "user.name"], name_ok),
-        ]),
-    )
-
-    assert _get_git_author_pattern() == "Jane Doe"
-
-
-def test_get_git_author_none_when_unset(monkeypatch):
-    import subprocess
-
-    cp_err_email = subprocess.CalledProcessError(1, ["git", "config", "--get", "user.email"], output="", stderr="")
-    cp_err_name = subprocess.CalledProcessError(1, ["git", "config", "--get", "user.name"], output="", stderr="")
-
-    monkeypatch.setattr(
-        subprocess,
-        "run",
-        make_run([
-            (["git", "config", "--get", "user.email"], cp_err_email),
-            (["git", "config", "--get", "user.name"], cp_err_name),
-        ]),
-    )
-
-    assert _get_git_author_pattern() is None
+def test_get_author_filters_empty_when_no_config(monkeypatch):
+    """Test that _get_author_filters returns empty list when no config."""
+    from unittest.mock import patch
+    
+    with patch('glin.git_tools.get_tracked_emails', return_value=[]):
+        filters = _get_author_filters()
+        assert filters == []
 
 
 def test_get_recent_commits_parses_output(monkeypatch):
     import subprocess
+    from unittest.mock import patch
 
-    email_ok = Completed(stdout="me@example.com\n")
     log_ok = Completed(
         stdout=(
             "deadbeef|Alice|2024-01-01 12:00:00 +0000|msg1\n"
@@ -99,162 +64,187 @@ def test_get_recent_commits_parses_output(monkeypatch):
         )
     )
 
-    monkeypatch.setattr(
-        subprocess,
-        "run",
-        make_run([
-            (["git", "config", "--get", "user.email"], email_ok),
-            (["git", "log"], log_ok),
-        ]),
-    )
+    with patch('glin.git_tools.get_tracked_emails', return_value=['me@example.com']):
+        monkeypatch.setattr(
+            subprocess,
+            "run",
+            make_run([
+                (["git", "log"], log_ok),
+            ]),
+        )
 
-    commits = get_recent_commits(2)
-    assert len(commits) == 2
-    assert commits[0]["hash"] == "deadbeef"
-    assert commits[1]["message"] == "feat: add stuff"
+        commits = get_recent_commits(2)
+        assert len(commits) == 2
+        assert commits[0]["hash"] == "deadbeef"
+        assert commits[1]["message"] == "feat: add stuff"
 
 
 def test_get_recent_commits_no_author_config(monkeypatch):
-    import subprocess
+    from unittest.mock import patch
 
-    cp_err_email = subprocess.CalledProcessError(1, ["git", "config", "--get", "user.email"], output="", stderr="")
-    cp_err_name = subprocess.CalledProcessError(1, ["git", "config", "--get", "user.name"], output="", stderr="")
-
-    monkeypatch.setattr(
-        subprocess,
-        "run",
-        make_run([
-            (["git", "config", "--get", "user.email"], cp_err_email),
-            (["git", "config", "--get", "user.name"], cp_err_name),
-        ]),
-    )
-
-    res = get_recent_commits(1)
-    assert res and "error" in res[0]
+    with patch('glin.git_tools.get_tracked_emails', return_value=[]):
+        res = get_recent_commits(1)
+        assert res and "error" in res[0]
+        assert "No email addresses configured" in res[0]["error"]
 
 
 def test_get_commits_by_date_parses_and_empty_info(monkeypatch):
     import subprocess
+    from unittest.mock import patch
 
-    email_ok = Completed(stdout="me@example.com\n")
     # First run: no commits; Second run: two commits
     log_empty = Completed(stdout="\n")
     log_two = Completed(stdout=("a1|A|2024-01-01 00:00:00 +0000|one\n" "b2|B|2024-01-02 00:00:00 +0000|two\n"))
 
     # Empty result case
-    monkeypatch.setattr(
-        subprocess,
-        "run",
-        make_run([
-            (["git", "config", "--get", "user.email"], email_ok),
-            (["git", "log"], log_empty),
-        ]),
-    )
-    res_empty = get_commits_by_date("yesterday", "now")
-    assert res_empty and res_empty[0].get("info") == "No commits found in date range"
+    with patch('glin.git_tools.get_tracked_emails', return_value=['me@example.com']):
+        monkeypatch.setattr(
+            subprocess,
+            "run",
+            make_run([
+                (["git", "log"], log_empty),
+            ]),
+        )
+        res_empty = get_commits_by_date("yesterday", "now")
+        assert res_empty and res_empty[0].get("info") == "No commits found in date range"
 
-    # Success case with two commits
-    monkeypatch.setattr(
-        subprocess,
-        "run",
-        make_run([
-            (["git", "config", "--get", "user.email"], email_ok),
-            (["git", "log"], log_two),
-        ]),
-    )
-    res = get_commits_by_date("1 week ago", "now")
-    assert len(res) == 2
-    assert res[0]["hash"] == "a1"
-    assert res[1]["message"] == "two"
+        # Success case with two commits
+        monkeypatch.setattr(
+            subprocess,
+            "run",
+            make_run([
+                (["git", "log"], log_two),
+            ]),
+        )
+        res = get_commits_by_date("1 week ago", "now")
+        assert len(res) == 2
+        assert res[0]["hash"] == "a1"
+        assert res[1]["message"] == "two"
 
 
 def test_get_commits_handles_subprocess_error(monkeypatch):
     import subprocess
+    from unittest.mock import patch
 
-    email_ok = Completed(stdout="me@example.com\n")
     cp_err = subprocess.CalledProcessError(128, ["git", "log"], output="", stderr="fatal: bad stuff")
 
-    monkeypatch.setattr(
-        subprocess,
-        "run",
-        make_run([
-            (["git", "config", "--get", "user.email"], email_ok),
-            (["git", "log"], cp_err),
-        ]),
-    )
+    with patch('glin.git_tools.get_tracked_emails', return_value=['me@example.com']):
+        monkeypatch.setattr(
+            subprocess,
+            "run",
+            make_run([
+                (["git", "log"], cp_err),
+            ]),
+        )
 
-    res = get_recent_commits(3)
-    assert res and "error" in res[0]
+        res = get_recent_commits(3)
+        assert res and "error" in res[0]
 
 
 def test_get_recent_commits_handles_general_exception(monkeypatch):
     import subprocess
+    from unittest.mock import patch
 
-    email_ok = Completed(stdout="me@example.com\n")
-    
     def failing_run(*args, **kwargs):
-        if args[0][:3] == ["git", "config", "--get"]:
-            return email_ok
         raise RuntimeError("Something went wrong")
 
-    monkeypatch.setattr(subprocess, "run", failing_run)
+    with patch('glin.git_tools.get_tracked_emails', return_value=['me@example.com']):
+        monkeypatch.setattr(subprocess, "run", failing_run)
 
-    res = get_recent_commits(3)
-    assert res and "error" in res[0]
-    assert "Failed to get commits" in res[0]["error"]
+        res = get_recent_commits(3)
+        assert res and "error" in res[0]
+        assert "Failed to get commits" in res[0]["error"]
 
 
 def test_get_commits_by_date_handles_subprocess_error(monkeypatch):
     import subprocess
+    from unittest.mock import patch
 
-    email_ok = Completed(stdout="me@example.com\n")
     cp_err = subprocess.CalledProcessError(128, ["git", "log"], output="", stderr="fatal: bad stuff")
 
-    monkeypatch.setattr(
-        subprocess,
-        "run",
-        make_run([
-            (["git", "config", "--get", "user.email"], email_ok),
-            (["git", "log"], cp_err),
-        ]),
-    )
+    with patch('glin.git_tools.get_tracked_emails', return_value=['me@example.com']):
+        monkeypatch.setattr(
+            subprocess,
+            "run",
+            make_run([
+                (["git", "log"], cp_err),
+            ]),
+        )
 
-    res = get_commits_by_date("yesterday", "now")
-    assert res and "error" in res[0]
+        res = get_commits_by_date("yesterday", "now")
+        assert res and "error" in res[0]
 
 
 def test_get_commits_by_date_handles_general_exception(monkeypatch):
     import subprocess
+    from unittest.mock import patch
 
-    email_ok = Completed(stdout="me@example.com\n")
-    
     def failing_run(*args, **kwargs):
-        if args[0][:3] == ["git", "config", "--get"]:
-            return email_ok
         raise RuntimeError("Something went wrong")
 
-    monkeypatch.setattr(subprocess, "run", failing_run)
+    with patch('glin.git_tools.get_tracked_emails', return_value=['me@example.com']):
+        monkeypatch.setattr(subprocess, "run", failing_run)
 
-    res = get_commits_by_date("yesterday", "now")
-    assert res and "error" in res[0]
-    assert "Failed to get commits" in res[0]["error"]
+        res = get_commits_by_date("yesterday", "now")
+        assert res and "error" in res[0]
+        assert "Failed to get commits" in res[0]["error"]
 
 
 def test_get_commits_by_date_no_author_config(monkeypatch):
-    import subprocess
+    from unittest.mock import patch
 
-    cp_err_email = subprocess.CalledProcessError(1, ["git", "config", "--get", "user.email"], output="", stderr="")
-    cp_err_name = subprocess.CalledProcessError(1, ["git", "config", "--get", "user.name"], output="", stderr="")
+    with patch('glin.git_tools.get_tracked_emails', return_value=[]):
+        res = get_commits_by_date("yesterday", "now")
+        assert res and "error" in res[0]
+        assert "No email addresses configured" in res[0]["error"]
 
-    monkeypatch.setattr(
-        subprocess,
-        "run",
-        make_run([
-            (["git", "config", "--get", "user.email"], cp_err_email),
-            (["git", "config", "--get", "user.name"], cp_err_name),
-        ]),
-    )
 
-    res = get_commits_by_date("yesterday", "now")
-    assert res and "error" in res[0]
-    assert "Git author not configured" in res[0]["error"]
+def test_get_tracked_email_config():
+    """Test getting current email configuration."""
+    from unittest.mock import patch
+    
+    with patch('glin.git_tools.get_tracked_emails', return_value=['user1@example.com', 'user2@example.com']):
+        with patch('glin.git_tools._get_config_source', return_value='environment_variable'):
+            config = get_tracked_email_config()
+            assert config['tracked_emails'] == ['user1@example.com', 'user2@example.com']
+            assert config['count'] == 2
+            assert config['source'] == 'environment_variable'
+
+
+def test_configure_tracked_emails_env():
+    """Test configuring emails via environment variable."""
+    emails = ['test1@example.com', 'test2@example.com']
+    result = configure_tracked_emails(emails, method='env')
+    
+    assert result['success'] is True
+    assert result['emails'] == emails
+    assert result['method'] == 'environment_variable'
+    assert 'GLIN_TRACK_EMAILS' in result['message']
+
+
+def test_configure_tracked_emails_file():
+    """Test configuring emails via config file."""
+    import tempfile
+    from pathlib import Path
+    from unittest.mock import patch
+    
+    emails = ['test1@example.com', 'test2@example.com']
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        expected_path = Path(tmpdir) / "glin.toml"
+        with patch('glin.git_tools.create_config_file', return_value=expected_path) as mock_create:
+            result = configure_tracked_emails(emails, method='file')
+            
+            assert result['success'] is True
+            assert result['emails'] == emails
+            assert result['method'] == 'config_file'
+            mock_create.assert_called_once_with(emails)
+
+
+def test_configure_tracked_emails_invalid_method():
+    """Test configuring emails with invalid method."""
+    emails = ['test@example.com']
+    result = configure_tracked_emails(emails, method='invalid')
+    
+    assert result['success'] is False
+    assert 'Unknown configuration method' in result['error']
