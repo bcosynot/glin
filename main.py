@@ -147,7 +147,7 @@ def append_to_markdown(content: str, file_path: str | None = None) -> dict:
         file_path: Optional target file path. Can be absolute or relative to the repo root.
 
     Returns:
-        A dict with operation details or an error message.
+        A dict with operation details or an error message, including the exact content and line numbers added.
     """
     try:
         if content is None or str(content).strip() == "":
@@ -204,19 +204,20 @@ def append_to_markdown(content: str, file_path: str | None = None) -> dict:
                 doc_lines.append("")
             doc_lines.append(heading)
             doc_lines.append("")  # blank line after heading
-            heading_idx = len(doc_lines) - 1  # index of the blank line we just added
-            # the actual section content starts at this position
+            # After appending, recalculate heading index
 
         # Determine insertion index: after the heading and any existing content of that section,
         # which we define as lines until the next heading (line starting with '#').
-        # First, find the line index of the heading itself
-        # If we just created heading, it's at doc_lines[-1] - 1; otherwise found earlier.
-        # Recompute heading index if needed
-        if heading_exists:
-            heading_idx = next(i for i, ln in enumerate(doc_lines) if ln.strip() == heading)
-        else:
-            # heading is at the line before the last blank line we added
-            heading_idx = next(i for i, ln in enumerate(doc_lines) if ln.strip() == heading)
+        # Recompute heading index to be robust
+        heading_idx = next((i for i, ln in enumerate(doc_lines) if ln.strip() == heading), None)
+        if heading_idx is None:
+            # Fallback: append heading at end if somehow missing
+            if doc_lines and doc_lines[-1].strip() != "":
+                doc_lines.append("")
+            doc_lines.append(heading)
+            doc_lines.append("")
+            heading_idx = len(doc_lines) - 2  # index of heading line
+            heading_exists = False
 
         # Find next heading after current section
         next_heading_idx = None
@@ -230,19 +231,32 @@ def append_to_markdown(content: str, file_path: str | None = None) -> dict:
         # Ensure there is a blank line after heading if immediate next line isn't blank and we're inserting directly
         after_heading_idx = heading_idx + 1
         if after_heading_idx >= len(doc_lines) or doc_lines[after_heading_idx].strip() != "":
-            # Only add a blank separator if we're inserting right after heading or existing content is not blank
             insert_block.append("")
         insert_block.extend(bullets)
 
         # If there will be another heading after, ensure there is a blank line before it
-        trailing_blank = False
         if next_heading_idx is not None:
-            # Check if the line before next heading will be blank; if not, add one
-            trailing_blank = True
             insert_block.append("")
 
         # Compute insertion position
         insert_pos = next_heading_idx if next_heading_idx is not None else len(doc_lines)
+
+        # Determine the 1-based line numbers for the bullets we will insert
+        # First, compute where within insert_block the bullets start
+        bullets_offset_in_block = 1 if (len(insert_block) > 0 and insert_block[0] == "") else 0
+        bullet_line_numbers = []
+        # The final line number for a given inserted line at block index k is (insert_pos + k) + 1
+        for idx in range(len(bullets)):
+            k = bullets_offset_in_block + idx
+            bullet_line_numbers.append(insert_pos + k + 1)
+
+        # If we created the heading in this call, compute its 1-based line number in the final document
+        heading_added = not heading_exists
+        heading_line_number = None
+        if heading_added:
+            # Heading line is at heading_idx (recomputed above) in doc_lines BEFORE inserting insert_block
+            # Since we haven't yet inserted insert_block, its final 1-based line number is heading_idx + 1
+            heading_line_number = heading_idx + 1
 
         # Insert bullets block
         doc_lines[insert_pos:insert_pos] = insert_block
@@ -253,13 +267,16 @@ def append_to_markdown(content: str, file_path: str | None = None) -> dict:
             new_content += "\n"
 
         path.write_text(new_content, encoding="utf-8")
-        bytes_written = len("\n".join(bullets))
 
         return {
             "ok": True,
             "path": str(path),
             "bullets_added": len(bullets),
+            "content_added": bullets,
+            "line_numbers_added": bullet_line_numbers,
             "heading": heading,
+            "heading_added": heading_added,
+            "heading_line_number": heading_line_number,
             "used_env": file_path is None and bool(os.getenv("GLIN_MD_PATH")),
             "defaulted": file_path is None and os.getenv("GLIN_MD_PATH") is None,
         }
