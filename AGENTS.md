@@ -111,6 +111,7 @@ This document captures build, testing, and development conventions that are spec
     - Target version: `py313`; line length: 100.
     - Lint rules: `select = ["E", "W", "F", "I", "UP", "B"]` with autofix enabled.
     - Format preferences: double quotes, space indent, docstring code formatting on.
+  - Do NOT use `from __future__ import annotations` anywhere in the codebase. Python 3.13 already stringizes annotations by default; the future import is unnecessary and can mask type issues. Remove it if you see it in any file.
   - Make targets:
     - `make format` → `uv run ruff format`
     - `make lint` → `uv run ruff check --fix`

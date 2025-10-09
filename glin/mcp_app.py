@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import sys
 
 # Optional FastMCP import with fallback stub for test environments without dependency
