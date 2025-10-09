@@ -47,22 +47,19 @@ Build an MCP server that automatically generates developer worklogs by capturing
 
 ---
 
-### Phase 2: Data Storage & Persistence (v0.4.0)
+### Phase 2: Data Storage & Persistence (v0.3.0)
 **Goal**: Reliable local data storage
 
 - [ ] SQLite database schema design
-- [ ] Git history indexing
 - [ ] Conversation log storage
 - [ ] Efficient querying and indexing
-- [ ] Data export/import functionality
 - [ ] Backup and migration tools
-- [ ] Optional cloud sync support
 
 **Timeline**: 2-3 weeks
 
 ---
 
-### Phase 3: Worklog Generation (v0.5.0)
+### Phase 3: Worklog Generation (v0.4.0)
 **Goal**: Transform raw data into human-readable worklogs
 
 - [ ] Natural language summarization (using LLM)
@@ -75,7 +72,7 @@ Build an MCP server that automatically generates developer worklogs by capturing
 
 **Timeline**: 3-4 weeks
 
-### Phase 4: AI Conversation Capture (v0.3.0)
+### Phase 4: AI Conversation Capture (v0.5.0)
 **Goal**: Capture and index AI assistant interactions
 
 - [ ] MCP client conversation logging
