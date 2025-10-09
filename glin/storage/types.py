@@ -20,6 +20,30 @@ class CommitRecord(TypedDict):
     files_changed: int
 
 
+class CommitInput(TypedDict, total=False):
+    """Input for upserting a commit (no DB id required).
+
+    Includes optional aggregated stats; compatible with git_tools outputs
+    when paired with per-file changes.
+    """
+
+    sha: str
+    author_email: str
+    author_name: str
+    author_date: str  # ISO 8601
+    message: str
+    insertions: NotRequired[int]
+    deletions: NotRequired[int]
+    files_changed: NotRequired[int]
+
+
+class CommitFileChange(TypedDict, total=False):
+    file_path: str
+    status: Literal["added", "modified", "deleted", "renamed"]
+    additions: NotRequired[int]
+    deletions: NotRequired[int]
+
+
 class CommitSummary(TypedDict):
     """A reduced view for UI lists or summaries."""
 
@@ -28,6 +52,22 @@ class CommitSummary(TypedDict):
     date: str  # ISO 8601
     title: str  # first line of message
     stats: dict[str, int]  # keys: insertions, deletions, files
+
+
+# Shapes compatible with glin.git_tools.commits
+class GitCommitInfo(TypedDict):
+    hash: str
+    author: str
+    date: str
+    message: str
+
+
+class ErrorResponse(TypedDict):
+    error: str
+
+
+class InfoResponse(TypedDict):
+    info: str
 
 
 class Message(TypedDict, total=False):
