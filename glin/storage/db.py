@@ -5,6 +5,21 @@ from pathlib import Path
 
 DEFAULT_DB_PATH = ".glin.sqlite3"
 
+# Types for status
+from typing import TypedDict
+
+
+class DBTableCount(TypedDict):
+    table: str
+    rows: int
+
+
+class DBStatus(TypedDict):
+    path: str
+    schema_version: int
+    tables: list[DBTableCount]
+    ok: bool
+
 
 def get_connection(db_path: str | None = None) -> sqlite3.Connection:
     """Return a sqlite3 connection with sensible defaults.
@@ -160,3 +175,57 @@ def init_db(db_path: str | None = None) -> int:
     """
 
     return migrate(db_path)
+
+
+# --- Backups & Status ------------------------------------------------------
+
+
+def create_backup(db_path: str | None = None, *, backups_root: str = ".glin/backups") -> Path:
+    """Create a timestamped backup of the database file.
+
+    The backup path pattern is backups_root/YYYYMMDD/HHMMSS/<db_filename>.
+    Returns the full path to the copied backup file.
+    """
+    import shutil
+
+    path = db_path or DEFAULT_DB_PATH
+    src = Path(path).expanduser()
+    if src.name == ":memory:":
+        raise ValueError("Cannot back up an in-memory database")
+    if not src.exists():
+        # Ensure directory exists but nothing to copy; raise to surface misconfiguration
+        raise FileNotFoundError(f"DB file not found: {src}")
+    ts = time.gmtime()
+    day = time.strftime("%Y%m%d", ts)
+    hms = time.strftime("%H%M%S", ts)
+    root = Path(backups_root) / day / hms
+    root.mkdir(parents=True, exist_ok=True)
+    dest = root / src.name
+    shutil.copy2(src, dest)
+    return dest
+
+
+def get_db_status(db_path: str | None = None) -> DBStatus:
+    """Return a status snapshot: path, schema version, and row counts per table."""
+    path = db_path or DEFAULT_DB_PATH
+    tables = ["schema_version", "conversations", "messages", "commits", "commit_files"]
+    counts: list[DBTableCount] = []
+    schema_version = 0
+    ok = True
+    try:
+        with get_connection(path) as conn:
+            # version
+            row = conn.execute("SELECT current_version FROM schema_version WHERE id = 1").fetchone()
+            schema_version = int(row[0]) if row else 0
+            for t in tables:
+                try:
+                    c = conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()
+                    counts.append({"table": t, "rows": int(c[0]) if c else 0})
+                except Exception:
+                    counts.append({"table": t, "rows": 0})
+                    ok = False
+    except Exception:
+        ok = False
+    return DBStatus(
+        path=str(Path(path).expanduser()), schema_version=schema_version, tables=counts, ok=ok
+    )

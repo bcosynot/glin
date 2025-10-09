@@ -1,4 +1,9 @@
-"""Configuration management for Glin."""
+"""Configuration management for Glin.
+
+Phase 2 additions: read-only handling of DB-related environment flags.
+- GLIN_DB_PATH: optional filesystem path to the SQLite database file.
+- GLIN_DB_AUTOWRITE: when truthy, certain integrations may persist data automatically.
+"""
 
 import os
 import subprocess
@@ -162,3 +167,27 @@ track_emails = {emails_array}
 
     config_path.write_text(content)
     return config_path
+
+
+# --- Phase 2: Integration flags (read-only helpers) -------------------------
+
+
+def get_db_path() -> str | None:
+    """Return the DB path from GLIN_DB_PATH if set, else None.
+
+    This function is read-only and does not create files or directories.
+    Other modules may choose their own defaults when this returns None.
+    """
+    value = os.getenv("GLIN_DB_PATH")
+    return value.strip() if value else None
+
+
+def get_db_autowrite() -> bool:
+    """Return True if GLIN_DB_AUTOWRITE is a truthy value.
+
+    Accepted truthy values (case-insensitive): '1', 'true', 'yes', 'on'.
+    """
+    val = os.getenv("GLIN_DB_AUTOWRITE")
+    if val is None:
+        return False
+    return val.strip().lower() in {"1", "true", "yes", "on"}
