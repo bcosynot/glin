@@ -1,55 +1,49 @@
-# Phase 3 Project Plan — Worklog Generation (v0.4.0)
+# Phase 3 Project Plan — Worklog Generation (Prompts-first, v0.4.0)
 
 Source: .junie/Roadmap.md (2025-10-09)
 
 ## Goals
-- Turn raw git (and placeholder conversation) data into readable, configurable worklogs.
-- Ship daily/weekly/sprint summaries with Markdown output and highlight extraction.
+- Provide reusable, documented server-side prompt templates for commit/diff/worklog/PR summaries via FastMCP.
+- Enable client LLMs to generate daily/weekly/sprint summaries using these prompts; the server does not call LLMs.
 
 ## Milestones and Deliverables
-1. M1: Scaffolding and Test Harness (Week 1)
-   - Deterministic pseudo-LLM component for tests.
-   - Template engine interface and default templates (daily/weekly/sprint).
-   - File writing harness reusing markdown_tools semantics.
-2. M2: Data Shaping and Highlighting (Week 2)
-   - Data model from git_tools (commits, diffs, stats, branches).
-   - Highlight detection rules and ranking.
-   - Edge cases: no commits, massive diffs.
-3. M3: Summarization + Rendering (Week 3)
-   - Summarizer pipeline combining data + templates.
-   - Render to Markdown string; verify structure via tests.
-4. M4: Write & Integrate (Week 4)
-   - Append/create in WORKLOG.md with correct headings/spacing.
-   - Expose Python helpers; optional MCP tool wrappers.
-   - Docs and examples in README.
+1. M1: Prompt Scaffolding (Week 1)
+   - Implement core prompts in glin/prompts.py: commit_summary, diff_summary, worklog_entry, pr_review_summary.
+   - Register prompts on the shared FastMCP instance (glin/mcp_app.py).
+   - Basic tags/metadata for filtering (e.g., ["summary", "analysis"]).
+2. M2: Arguments and Validation (Week 2)
+   - Define argument schemas (names/descriptions/required) and input wrapping conventions (<COMMITS>, <DIFF>, etc.).
+   - Tests for list_prompts/get_prompt, including automatic JSON serialization behavior in clients.
+3. M3: Documentation and Examples (Week 3)
+   - README updates: how to list and render prompts; example client snippets.
+   - Usage guidance: size limits, chunking tips, and date formatting.
+4. M4: Optional Local Integration (Week 4)
+   - Example flow using markdown_tools locally to write worklogs with client-rendered text.
+   - Keep file writing out of server responsibilities; provide guidance only.
 
 ## Timeline
 - Estimated: 3–4 weeks (per roadmap). Target v0.4.0.
 
 ## Work Breakdown Structure
-- Engine
-  - Template system (loading, token replacement, presets).
-  - Summarizer (LLM interface abstraction with mockable backend).
-  - Highlighter (rules: PR merges, big diffs, tags, issue keys).
-- I/O
-  - Data fetchers (thin wrappers around glin.git_tools).
-  - Markdown writer (delegates to markdown_tools.append_to_markdown where possible).
-- API
-  - render_worklog, write_worklog, generate_worklog.
-  - Type definitions for WriteResult and data records.
-- Tests
-  - Unit tests for each engine component and writer behavior.
-  - Golden tests for template rendering.
+- Prompts
+  - System/user message composition with safety and structure guidance.
+  - Tags/metadata for filtering; argument docs.
+- Testing
+  - Unit tests for registration, discovery, and rendering outputs.
+- Docs
+  - README examples for FastMCP prompt APIs; notes on argument serialization.
+- Optional Examples
+  - Local markdown writing example leveraging markdown_tools.
 
 ## Definition of Done
 - All M1–M4 deliverables complete with tests and README updates.
-- Coverage does not regress; new modules have focused tests.
-- Deterministic test mode; no network/real LLM required.
+- Coverage does not regress; new prompt module has focused tests.
+- No server-side LLM usage; prompts are discoverable and renderable.
 
 ## Risks and Contingencies
-- LLM prompt drift → Pin prompt templates; provide seedable mock.
-- Performance on large repos → Summarize by groups; lazy-load diffs; cap outputs.
-- File clobbering → Always use append_to_markdown and test with tmp paths.
+- Overly long inputs → Recommend chunking and selective inclusion in docs.
+- Ambiguous client expectations → Provide minimal but clear output format expectations within prompts.
+- File clobbering (when using local examples) → Use append_to_markdown and tmp paths in examples/tests.
 
 ## Acceptance
-- Running generate_worklog("daily") on a repo with commits produces a well-formed Markdown section and returns a structured WriteResult.
+- Clients can call list_prompts() and get_prompt() to retrieve message sequences for the four core prompts.

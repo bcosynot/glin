@@ -24,6 +24,7 @@ except Exception:  # pragma: no cover - used only when fastmcp is unavailable
             The real FastMCP exposes a similar decorator; this stub captures enough
             to let tests discover prompts and call their render function.
             """
+
             def decorator(func):
                 # Store minimal metadata for tests
                 self._prompts.append(
@@ -46,10 +47,10 @@ mcp = FastMCP("Glin - Your worklog, without the work")
 
 # Ensure we can introspect prompts during tests even if fastmcp is installed
 if not hasattr(mcp, "_prompts"):
-    setattr(mcp, "_prompts", [])
+    mcp._prompts = []
 
 # Wrap the underlying prompt decorator (if present) to also record registrations
-if hasattr(mcp, "prompt") and callable(getattr(mcp, "prompt")):
+if hasattr(mcp, "prompt") and callable(mcp.prompt):
     _orig_prompt = mcp.prompt  # type: ignore[attr-defined]
 
     def _prompt_wrapper(*args, **kwargs):  # type: ignore[no-redef]
