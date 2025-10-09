@@ -1,7 +1,7 @@
 import subprocess
 from typing import TypedDict
 
-from . import create_config_file, get_tracked_emails, set_tracked_emails_env
+import glin.git_tools as git_tools
 from ..mcp_app import mcp
 
 
@@ -56,14 +56,14 @@ def _get_config_source() -> str:
 
 
 def get_tracked_email_config() -> EmailConfig:
-    emails = get_tracked_emails()
-    return {"tracked_emails": emails, "count": len(emails), "source": _get_config_source()}
+    emails = git_tools.get_tracked_emails()
+    return {"tracked_emails": emails, "count": len(emails), "source": git_tools._get_config_source()}
 
 
 def configure_tracked_emails(emails: list[str], method: str = "env") -> ConfigureSuccessResponse | ConfigureErrorResponse:
     try:
         if method == "env":
-            set_tracked_emails_env(emails)
+            git_tools.set_tracked_emails_env(emails)
             return {
                 "success": True,
                 "message": f"Set GLIN_TRACK_EMAILS environment variable with {len(emails)} emails",
@@ -72,7 +72,7 @@ def configure_tracked_emails(emails: list[str], method: str = "env") -> Configur
                 "config_path": None,
             }
         if method == "file":
-            cfg_path = create_config_file(emails)
+            cfg_path = git_tools.create_config_file(emails)
             return {
                 "success": True,
                 "message": f"Created configuration file at {cfg_path} with {len(emails)} emails",
