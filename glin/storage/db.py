@@ -3,7 +3,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-DEFAULT_DB_PATH = ".glin.sqlite3"
+DEFAULT_DB_PATH = "~/.glin/db.sqlite3"
 
 # Types for status
 from typing import TypedDict

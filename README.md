@@ -78,7 +78,7 @@ Glin provides MCP tools to manage email configuration:
 
 Phase 2 introduces an optional local SQLite storage used by some tools. By default, no database writes occur unless explicitly enabled.
 
-- Database path: set with `GLIN_DB_PATH` (e.g., `~/.glin/db.sqlite3`). If unset, modules that use storage may fall back to `.glin.sqlite3` in the current directory.
+- Database path: set with `GLIN_DB_PATH` (e.g., `~/.glin/db.sqlite3`). If unset, modules that use storage will fall back to the default `~/.glin/db.sqlite3` in your home directory.
 - Auto-write: enable side-effectful persistence from certain tools by setting `GLIN_DB_AUTOWRITE` to a truthy value (`1`, `true`, `yes`, `on`). When enabled, git commit queries may upsert fetched commits into the database.
 - Backups: you can create a timestamped backup of the database using the storage helper `create_backup()`. Backups are written to `.glin/backups/YYYYMMDD/HHMMSS/<db-file>` by default.
 - Status: use `get_db_status()` to inspect the schema version and row counts per table.
