@@ -107,7 +107,9 @@ def get_branch_commits(branch: str, count: int = 10) -> list[CommitInfo | ErrorR
         "for the configured tracked email addresses."
     ),
 )
-def _tool_get_recent_commits(count: int = 10):  # pragma: no cover
+def _tool_get_recent_commits(
+    count: int = 10,
+) -> list[CommitInfo | ErrorResponse]:  # pragma: no cover
     return get_recent_commits(count=count)
 
 
@@ -120,7 +122,9 @@ def _tool_get_recent_commits(count: int = 10):  # pragma: no cover
         "tracked email addresses."
     ),
 )
-def _tool_get_commits_by_date(since: str, until: str = "now"):  # pragma: no cover
+def _tool_get_commits_by_date(
+    since: str, until: str = "now"
+) -> list[CommitInfo | ErrorResponse | InfoResponse]:  # pragma: no cover
     return get_commits_by_date(since=since, until=until)
 
 

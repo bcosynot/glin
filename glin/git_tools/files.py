@@ -1,6 +1,23 @@
 import subprocess
 from typing import TypedDict
 
+
+class ErrorResponse(TypedDict):
+    error: str
+
+
+class CommitFilesResult(TypedDict):
+    hash: str
+    author: str
+    email: str
+    date: str
+    message: str
+    files: list["FileChange"]
+    total_additions: int
+    total_deletions: int
+    files_changed: int
+
+
 from ..mcp_app import mcp
 
 
@@ -12,7 +29,7 @@ class FileChange(TypedDict):
     old_path: str | None
 
 
-def get_commit_files(commit_hash: str):
+def get_commit_files(commit_hash: str) -> CommitFilesResult | ErrorResponse:
     try:
         metadata_cmd = [
             "git",
@@ -98,5 +115,7 @@ def get_commit_files(commit_hash: str):
         "metadata along with a list of files showing their status and line counts."
     ),
 )
-def _tool_get_commit_files(commit_hash: str):  # pragma: no cover
+def _tool_get_commit_files(
+    commit_hash: str,
+) -> CommitFilesResult | ErrorResponse:  # pragma: no cover
     return get_commit_files(commit_hash=commit_hash)

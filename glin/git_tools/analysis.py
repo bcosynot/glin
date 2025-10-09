@@ -3,6 +3,11 @@ import subprocess
 from collections import defaultdict
 from typing import TypedDict
 
+
+class ErrorResponse(TypedDict):
+    error: str
+
+
 from ..mcp_app import mcp
 
 
@@ -107,7 +112,7 @@ def _get_commit_message(commit_hash: str) -> str:
     return res.stdout.strip()
 
 
-def detect_merge_info(commit_hash: str) -> MergeInfo | dict:
+def detect_merge_info(commit_hash: str) -> MergeInfo | ErrorResponse:
     """Detect whether a commit is a merge, and whether it's a PR merge.
 
     Heuristics for PR merges:
@@ -153,7 +158,7 @@ def detect_merge_info(commit_hash: str) -> MergeInfo | dict:
         return {"error": f"Failed to detect merge info: {str(e)}"}
 
 
-def get_commit_statistics(commit_hash: str) -> CommitStats | dict:
+def get_commit_statistics(commit_hash: str) -> CommitStats | ErrorResponse:
     """Aggregate simple statistics for a commit, including language breakdown.
 
     Uses `git show --numstat` and infers language from file extensions.
@@ -218,7 +223,9 @@ _CONVENTIONAL_RE = re.compile(
 )
 
 
-def categorize_commit(message_or_hash: str, is_hash: bool = False) -> Categorization | dict:
+def categorize_commit(
+    message_or_hash: str, is_hash: bool = False
+) -> Categorization | ErrorResponse:
     """Categorize a commit message using Conventional Commits.
 
     If is_hash=True, the argument is treated as a commit hash and its subject is resolved first.
@@ -315,7 +322,7 @@ def blame_file(
         "Detect whether a commit is a merge and whether it looks like a PR merge. Returns parents, flags and PR number if available."
     ),
 )
-def _tool_detect_merge_info(commit_hash: str):  # pragma: no cover
+def _tool_detect_merge_info(commit_hash: str) -> MergeInfo | ErrorResponse:  # pragma: no cover
     return detect_merge_info(commit_hash=commit_hash)
 
 
@@ -325,7 +332,9 @@ def _tool_detect_merge_info(commit_hash: str):  # pragma: no cover
         "Get aggregate statistics for a commit (additions, deletions, files changed) with a simple language breakdown."
     ),
 )
-def _tool_get_commit_statistics(commit_hash: str):  # pragma: no cover
+def _tool_get_commit_statistics(
+    commit_hash: str,
+) -> CommitStats | ErrorResponse:  # pragma: no cover
     return get_commit_statistics(commit_hash=commit_hash)
 
 
@@ -335,7 +344,9 @@ def _tool_get_commit_statistics(commit_hash: str):  # pragma: no cover
         "Categorize a commit message per Conventional Commits. Pass a commit hash with is_hash=True to resolve subject from git."
     ),
 )
-def _tool_categorize_commit(message_or_hash: str, is_hash: bool = False):  # pragma: no cover
+def _tool_categorize_commit(
+    message_or_hash: str, is_hash: bool = False
+) -> Categorization | ErrorResponse:  # pragma: no cover
     return categorize_commit(message_or_hash=message_or_hash, is_hash=is_hash)
 
 

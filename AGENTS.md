@@ -175,6 +175,29 @@ Notes
 - Tests were updated to patch module-level functions in the new package layout. When writing tests, patch `glin.git_tools.<module>.<name>` rather than deep internals.
 - The public API is preserved; the shim is intended to ease migration for external users.
 
+## Type annotations: arguments and returns
+
+- Always annotate function/method arguments and return types in new or modified code.
+- Prefer concrete, structured types over plain dict or list when the shape is known:
+  - Use TypedDict (with total or total=False) or dataclasses for mapping-shaped results.
+  - Use Literal and unions for well-defined variant responses (e.g., success vs error).
+  - Example (simplified):
+    ```python
+    from typing import TypedDict
+
+    class ErrorResponse(TypedDict):
+        error: str
+
+    class Item(TypedDict):
+        id: str
+        name: str
+
+    def get_items(limit: int = 10) -> list[Item] | ErrorResponse:
+        ...
+    ```
+- MCP tool wrappers should mirror the return type of the underlying helper.
+- Keep types import-light and Python 3.13 native (builtins like list[str]) and align with Ruff.
+
 ## After every task: format and lint
 
 Run Ruff formatter and linter before marking a task complete or opening/refreshing a PR. Use Makefile targets (preferred):

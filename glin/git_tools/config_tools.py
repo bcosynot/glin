@@ -103,7 +103,7 @@ def configure_tracked_emails(
         "addresses, count, and configuration source (environment variable, config file, or git config)."
     ),
 )
-def _tool_get_tracked_email_config():  # pragma: no cover
+def _tool_get_tracked_email_config() -> EmailConfig:  # pragma: no cover
     return get_tracked_email_config()
 
 
@@ -114,5 +114,7 @@ def _tool_get_tracked_email_config():  # pragma: no cover
         "GLIN_TRACK_EMAILS environment variable, or 'file' to create a glin.toml configuration file."
     ),
 )
-def _tool_configure_tracked_emails(emails: list[str], method: str = "env"):  # pragma: no cover
+def _tool_configure_tracked_emails(
+    emails: list[str], method: str = "env"
+) -> ConfigureSuccessResponse | ConfigureErrorResponse:  # pragma: no cover
     return configure_tracked_emails(emails=emails, method=method)
