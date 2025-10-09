@@ -1,7 +1,7 @@
 from glin.git_tools import (
+    get_branch_commits,
     get_current_branch,
     list_branches,
-    get_branch_commits,
 )
 
 
@@ -39,7 +39,10 @@ def test_get_current_branch_basic(monkeypatch):
         make_run(
             [
                 (["git", "rev-parse", "--abbrev-ref", "HEAD"], name),
-                (["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], upstream),
+                (
+                    ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
+                    upstream,
+                ),
                 (["git", "rev-list", "--left-right", "--count"], counts),
             ]
         ),
@@ -102,10 +105,12 @@ def test_get_branch_commits_filtered(monkeypatch):
     import subprocess
     from unittest.mock import patch
 
-    log_ok = Completed(stdout=(
-        "deadbeef|Alice|2024-01-01 12:00:00 +0000|on feature\n"
-        "cafebabe|Alice|2024-01-02 12:00:00 +0000|second\n"
-    ))
+    log_ok = Completed(
+        stdout=(
+            "deadbeef|Alice|2024-01-01 12:00:00 +0000|on feature\n"
+            "cafebabe|Alice|2024-01-02 12:00:00 +0000|second\n"
+        )
+    )
 
     with patch("glin.git_tools.get_tracked_emails", return_value=["alice@example.com"]):
         monkeypatch.setattr(
