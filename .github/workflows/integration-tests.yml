@@ -1,0 +1,84 @@
+name: Integration Tests
+
+on:
+  pull_request:
+    branches: ["*"]
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv sync --group dev
+
+      - name: Configure git for tests
+        run: |
+          git config --global user.email "ci@glin.test"
+          git config --global user.name "Glin CI"
+
+      - name: Start MCP server in background
+        run: |
+          uv run python main.py --transport http > server.log 2>&1 &
+          echo $! > server.pid
+          # Wait for server to start
+          sleep 5
+          # Verify server is running
+          if ! kill -0 $(cat server.pid) 2>/dev/null; then
+            echo "Server failed to start"
+            cat server.log
+            exit 1
+          fi
+
+      - name: Run integration tests
+        id: integration_tests
+        run: |
+          uv run python test_client.py
+          echo "result=$?" >> $GITHUB_OUTPUT
+
+      - name: Stop MCP server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            kill $(cat server.pid) 2>/dev/null || true
+            rm server.pid
+          fi
+
+      - name: Upload server logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-logs
+          path: server.log
+          if-no-files-found: warn
+
+      - name: Add integration test summary
+        if: always()
+        run: |
+          echo "### Integration Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.integration_tests.outputs.result }}" = "0" ]; then
+            echo "✅ All integration tests passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Integration tests failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Check the server logs artifact for details." >> $GITHUB_STEP_SUMMARY
+          fi

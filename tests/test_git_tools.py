@@ -1,7 +1,12 @@
 
 
 from glin.git_tools import (
+    _build_git_log_command,
+    _check_git_config,
     _get_author_filters,
+    _get_config_source,
+    _handle_git_error,
+    _parse_commit_lines,
     configure_tracked_emails,
     get_commit_diff,
     get_commit_files,
@@ -273,6 +278,21 @@ def test_configure_tracked_emails_invalid_method():
 
     assert result["success"] is False
     assert "Unknown configuration method" in result["error"]
+
+
+def test_configure_tracked_emails_exception_handling(monkeypatch):
+    """Test configuring emails handles exceptions."""
+    from unittest.mock import patch
+
+    emails = ["test@example.com"]
+
+    # Mock set_tracked_emails_env to raise an exception
+    with patch("glin.git_tools.set_tracked_emails_env", side_effect=RuntimeError("Test error")):
+        result = configure_tracked_emails(emails, method="env")
+
+        assert result["success"] is False
+        assert "Failed to configure emails" in result["error"]
+        assert "Test error" in result["error"]
 
 
 def test_get_commit_diff_success(monkeypatch):
@@ -667,6 +687,249 @@ def test_get_commit_files_general_exception(monkeypatch):
 
     assert "error" in result
     assert "Failed to get commit files" in result["error"]
+
+
+def test_build_git_log_command_basic():
+    """Test building git log command with basic arguments."""
+    base_args = ["-10"]
+    author_filters = ["user@example.com"]
+
+    cmd = _build_git_log_command(base_args, author_filters)
+
+    assert cmd == [
+        "git",
+        "log",
+        "-10",
+        "--author=user@example.com",
+        "--pretty=format:%H|%an|%ai|%s",
+    ]
+
+
+def test_build_git_log_command_multiple_authors():
+    """Test building git log command with multiple author filters."""
+    base_args = ["--since=yesterday", "--until=now"]
+    author_filters = ["user1@example.com", "user2@example.com"]
+
+    cmd = _build_git_log_command(base_args, author_filters)
+
+    assert cmd == [
+        "git",
+        "log",
+        "--since=yesterday",
+        "--until=now",
+        "--author=user1@example.com",
+        "--author=user2@example.com",
+        "--pretty=format:%H|%an|%ai|%s",
+    ]
+
+
+def test_build_git_log_command_no_authors():
+    """Test building git log command with no author filters."""
+    base_args = ["-5"]
+    author_filters = []
+
+    cmd = _build_git_log_command(base_args, author_filters)
+
+    assert cmd == ["git", "log", "-5", "--pretty=format:%H|%an|%ai|%s"]
+
+
+def test_parse_commit_lines_single():
+    """Test parsing single commit line."""
+    output = "abc123|Alice Author|2024-01-01 12:00:00 +0000|feat: add feature"
+
+    commits = _parse_commit_lines(output)
+
+    assert len(commits) == 1
+    assert commits[0]["hash"] == "abc123"
+    assert commits[0]["author"] == "Alice Author"
+    assert commits[0]["date"] == "2024-01-01 12:00:00 +0000"
+    assert commits[0]["message"] == "feat: add feature"
+
+
+def test_parse_commit_lines_multiple():
+    """Test parsing multiple commit lines."""
+    output = (
+        "abc123|Alice|2024-01-01 12:00:00 +0000|feat: add feature\n"
+        "def456|Bob|2024-01-02 13:00:00 +0000|fix: bug fix\n"
+        "ghi789|Charlie|2024-01-03 14:00:00 +0000|docs: update readme"
+    )
+
+    commits = _parse_commit_lines(output)
+
+    assert len(commits) == 3
+    assert commits[0]["hash"] == "abc123"
+    assert commits[1]["author"] == "Bob"
+    assert commits[2]["message"] == "docs: update readme"
+
+
+def test_parse_commit_lines_with_pipe_in_message():
+    """Test parsing commit with pipe character in message."""
+    output = "abc123|Alice|2024-01-01 12:00:00 +0000|feat: add feature | with pipe"
+
+    commits = _parse_commit_lines(output)
+
+    assert len(commits) == 1
+    assert commits[0]["message"] == "feat: add feature | with pipe"
+
+
+def test_parse_commit_lines_empty():
+    """Test parsing empty output."""
+    output = ""
+
+    commits = _parse_commit_lines(output)
+
+    assert commits == []
+
+
+def test_parse_commit_lines_whitespace_only():
+    """Test parsing whitespace-only output."""
+    output = "\n\n  \n"
+
+    commits = _parse_commit_lines(output)
+
+    assert commits == []
+
+
+def test_handle_git_error_called_process_error():
+    """Test handling CalledProcessError."""
+    import subprocess
+
+    error = subprocess.CalledProcessError(
+        128, ["git", "log"], output="", stderr="fatal: not a git repository"
+    )
+
+    result = _handle_git_error(error)
+
+    assert len(result) == 1
+    assert "error" in result[0]
+    assert "Git command failed" in result[0]["error"]
+    assert "fatal: not a git repository" in result[0]["error"]
+
+
+def test_handle_git_error_generic_exception():
+    """Test handling generic exception."""
+    error = RuntimeError("Something went wrong")
+
+    result = _handle_git_error(error)
+
+    assert len(result) == 1
+    assert "error" in result[0]
+    assert "Failed to get commits" in result[0]["error"]
+    assert "Something went wrong" in result[0]["error"]
+
+
+def test_check_git_config_exists(monkeypatch):
+    """Test checking git config when key exists."""
+    import subprocess
+
+    def mock_run(cmd, **kwargs):
+        if cmd == ["git", "config", "--get", "user.email"]:
+            return Completed(stdout="user@example.com\n")
+        raise AssertionError(f"Unexpected command: {cmd}")
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+    result = _check_git_config("user.email")
+
+    assert result is True
+
+
+def test_check_git_config_not_exists(monkeypatch):
+    """Test checking git config when key doesn't exist."""
+    import subprocess
+
+    def mock_run(cmd, **kwargs):
+        if cmd == ["git", "config", "--get", "user.email"]:
+            raise subprocess.CalledProcessError(1, cmd)
+        raise AssertionError(f"Unexpected command: {cmd}")
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+    result = _check_git_config("user.email")
+
+    assert result is False
+
+
+def test_get_config_source_environment(monkeypatch):
+    """Test config source detection from environment variable."""
+    monkeypatch.setenv("GLIN_TRACK_EMAILS", "user@example.com")
+
+    source = _get_config_source()
+
+    assert source == "environment_variable"
+
+
+def test_get_config_source_config_file(monkeypatch, tmp_path):
+    """Test config source detection from config file."""
+    import os
+
+    monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
+
+    # Create a config file in current directory
+    config_file = tmp_path / "glin.toml"
+    config_file.write_text('track_emails = ["user@example.com"]\n')
+
+    # Change to temp directory
+    monkeypatch.chdir(tmp_path)
+
+    source = _get_config_source()
+
+    assert source.startswith("config_file")
+    assert "glin.toml" in source
+
+
+def test_get_config_source_git_user_email(monkeypatch):
+    """Test config source detection from git user.email."""
+    import subprocess
+
+    monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
+
+    def mock_run(cmd, **kwargs):
+        if cmd == ["git", "config", "--get", "user.email"]:
+            return Completed(stdout="user@example.com\n")
+        raise subprocess.CalledProcessError(1, cmd)
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+    source = _get_config_source()
+
+    assert source == "git_user_email"
+
+
+def test_get_config_source_git_user_name(monkeypatch):
+    """Test config source detection from git user.name."""
+    import subprocess
+
+    monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
+
+    def mock_run(cmd, **kwargs):
+        if cmd == ["git", "config", "--get", "user.email"]:
+            raise subprocess.CalledProcessError(1, cmd)
+        if cmd == ["git", "config", "--get", "user.name"]:
+            return Completed(stdout="User Name\n")
+        raise subprocess.CalledProcessError(1, cmd)
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+    source = _get_config_source()
+
+    assert source == "git_user_name"
+
+
+def test_get_config_source_none(monkeypatch):
+    """Test config source detection when no config exists."""
+    import subprocess
+
+    monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
+
+    def mock_run(cmd, **kwargs):
+        raise subprocess.CalledProcessError(1, cmd)
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+    source = _get_config_source()
+
+    assert source == "none"
 
 
 def test_get_commit_files_empty_commit(monkeypatch):
