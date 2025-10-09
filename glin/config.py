@@ -33,11 +33,7 @@ def get_tracked_emails() -> list[str]:
     if config_emails:
         return config_emails
 
-    # 3. In CI environments, avoid relying on git; default to empty list
-    if _is_ci():
-        return []
-
-    # 4. Fallback to git configuration (developer machines)
+    # 3. Fallback to git configuration
     git_pattern = _get_git_author_pattern()
     if git_pattern:
         return [git_pattern]
