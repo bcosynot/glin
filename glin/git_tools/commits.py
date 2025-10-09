@@ -2,7 +2,6 @@ import subprocess
 from typing import TypedDict
 
 from ..mcp_app import mcp
-from . import get_tracked_emails
 
 
 class CommitInfo(TypedDict):
@@ -54,8 +53,9 @@ def _handle_git_error(e: Exception) -> list[ErrorResponse]:
 
 def _get_author_filters() -> list[str]:
     # Local import so test monkeypatching glin.git_tools.get_tracked_emails takes effect
+    from . import get_tracked_emails as _get  # type: ignore
 
-    return get_tracked_emails()
+    return _get()
 
 
 def get_recent_commits(count: int = 10) -> list[CommitInfo | ErrorResponse]:
@@ -107,7 +107,9 @@ def get_branch_commits(branch: str, count: int = 10) -> list[CommitInfo | ErrorR
         "for the configured tracked email addresses."
     ),
 )
-def _tool_get_recent_commits(count: int = 10):  # pragma: no cover
+def _tool_get_recent_commits(
+    count: int = 10,
+) -> list[CommitInfo | ErrorResponse]:  # pragma: no cover
     return get_recent_commits(count=count)
 
 
@@ -120,7 +122,9 @@ def _tool_get_recent_commits(count: int = 10):  # pragma: no cover
         "tracked email addresses."
     ),
 )
-def _tool_get_commits_by_date(since: str, until: str = "now"):  # pragma: no cover
+def _tool_get_commits_by_date(
+    since: str, until: str = "now"
+) -> list[CommitInfo | ErrorResponse | InfoResponse]:  # pragma: no cover
     return get_commits_by_date(since=since, until=until)
 
 

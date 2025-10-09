@@ -52,7 +52,28 @@ def get_current_branch() -> dict:
         return {"error": f"Failed to get current branch: {str(e)}"}
 
 
-def list_branches():
+from typing import TypedDict
+
+
+class BranchLastCommit(TypedDict, total=False):
+    hash: str
+    author: str
+    email: str | None
+    date: str
+    message: str
+
+
+class BranchEntry(TypedDict, total=False):
+    name: str
+    is_current: bool
+    upstream: str | None
+    ahead: int
+    behind: int
+    last_commit: BranchLastCommit | None
+    error: str
+
+
+def list_branches() -> list[BranchEntry]:
     try:
         fmt = "%(refname:short)|%(objectname)|%(upstream:short)|%(authorname)|%(authoremail)|%(authordate:iso8601)|%(subject)"
         res = subprocess.run(
@@ -122,7 +143,7 @@ def list_branches():
         "Get the current git branch information, including whether HEAD is detached, the upstream (if any), and ahead/behind counts versus upstream."
     ),
 )
-def _tool_get_current_branch():  # pragma: no cover
+def _tool_get_current_branch() -> dict:  # pragma: no cover
     return get_current_branch()
 
 
@@ -132,5 +153,5 @@ def _tool_get_current_branch():  # pragma: no cover
         "List local branches with upstream, ahead/behind counts, and last commit metadata. The current branch is marked in the response."
     ),
 )
-def _tool_list_branches():  # pragma: no cover
+def _tool_list_branches() -> list[BranchEntry]:  # pragma: no cover
     return list_branches()  # type: ignore[return-value]

@@ -7,6 +7,12 @@ from ..config import (
     get_tracked_emails,  # re-export for backward-compatibility in tests/patching
     set_tracked_emails_env,
 )
+from .analysis import (
+    blame_file,
+    categorize_commit,
+    detect_merge_info,
+    get_commit_statistics,
+)
 from .branches import get_current_branch, list_branches
 from .commits import (
     CommitInfo,
