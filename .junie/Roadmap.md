@@ -66,9 +66,7 @@ Build an MCP server that automatically generates developer worklogs by capturing
 - [ ] Configurable summary templates
 - [ ] Daily/weekly/sprint summaries
 - [ ] Achievement highlighting
-- [ ] Time-based activity grouping
-- [ ] Custom filters (by project, date, file type)
-- [ ] Export formats (Markdown, JSON, HTML, PDF)
+- [ ] Write to markdown file
 
 **Timeline**: 3-4 weeks
 
