@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from .db import get_connection
 from .types import CommitRecord, CommitSummary
 
