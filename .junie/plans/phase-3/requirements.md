@@ -1,71 +1,66 @@
-# Phase 3: Worklog Generation — Requirements
+# Phase 3: Worklog Generation — Requirements (Prompt-Centric)
 
 Source: .junie/Roadmap.md (Last updated: 2025-10-09)
 
 ## Objective
-Transform stored git/conversation data into accurate, human-readable worklogs suitable for daily standups, weekly/sprint updates, and performance reviews.
+Provide server-side prompt templates (via FastMCP Prompts API) that LLM clients can use to generate accurate, human-readable worklogs and summaries without the server invoking any LLMs.
 
 ## In-Scope Functional Requirements
-1. Natural language summarization
-   - Use an LLM to turn structured activity data (commits, diffs, file stats, conversations) into prose.
-   - Controllable verbosity: brief, standard, detailed.
-   - Supports perspectives: individual developer (default); future: team roll-up (out of scope now).
-2. Configurable summary templates
-   - Token-based or Jinja-like templates to shape structure (e.g., headings, sections).
-   - Built-in presets: daily.md, weekly.md, sprint.md.
-   - Per-user overrides via glin.toml or env var.
-3. Time-slice summaries
-   - Daily, weekly, and sprint windows.
-   - Date bounds may be explicit (YYYY-MM-DD) or relative ("yesterday", "last week").
-4. Achievement highlighting
-   - Detect notable events: merged PRs, first release tags, big diffs, closed issues (if referenced in commits).
-   - Deduplicate and rank highlights; include links/ids when available.
-5. Markdown output
-   - Write summaries to a Markdown file with normalized Unix newlines.
-   - Default path: ./WORKLOG.md (align with markdown_tools), overridable via GLIN_MD_PATH or function arg.
-   - Ensure a date-scoped heading: "## YYYY-MM-DD" for daily; "## YYYY-Www" for weekly; "## Sprint <name or dates>".
+1. Server-side prompt templates (no server-side LLM calls)
+   - Expose reusable prompts for commits, diffs, daily worklogs, and PR reviews.
+   - Each prompt returns a sequence of MCP messages (system/user) suitable for client-side LLMs.
+   - Include clear, safety-focused system guidance and deterministic structure.
+2. Prompt arguments and metadata
+   - Define arguments with name, description, and required flags.
+   - Support optional context/date ranges.
+   - Provide tags via `_meta._fastmcp.tags` to enable client-side filtering.
+3. Prompt discovery and rendering
+   - Prompts are discoverable through `list_prompts()` and renderable with `get_prompt(name, args)`.
+   - Arguments accept complex values; clients auto-serialize to JSON per FastMCP.
+4. Time-slice orientation and headings (client responsibility)
+   - Prompts include guidance for daily/weekly/sprint framing; final formatting and file writes remain on the client (or existing markdown tools if used locally).
+5. Documentation and examples
+   - README includes examples for listing and getting prompts with FastMCP clients and argument serialization.
 
 ## Non-Functional Requirements
-- Deterministic and hermetic: unit tests must pass without network; all LLM calls are mockable.
-- Performance: generate a daily worklog for 200 commits in < 1s with cached inputs; < 3s cold (excluding real LLM).
-- Privacy-first: no data leaves machine in tests; clearly marked flags if/when remote LLMs are used.
-- Extensibility: summarizer and template engines modular; new templates can be added without touching core.
-- Error handling: return structured errors; never corrupt existing WORKLOG.md.
+- Deterministic and hermetic: unit tests pass without network; no server-side LLM usage.
+- Performance: listing and rendering prompts is near-instant; no heavy processing.
+- Privacy-first: server does not transmit repo data externally; clients decide what to include in prompt args.
+- Extensibility: easy to add new prompts without touching unrelated code.
+- Error handling: return informative errors for missing/invalid arguments.
 
 ## Inputs
-- Git data via glin.git_tools.* (commits, diffs, files, branches, stats).
-- Optional conversation data (will be empty/stub in Phase 3).
-- Config from glin.toml and env variables (GLIN_TRACK_EMAILS, GLIN_MD_PATH, template overrides).
+- Client-provided strings for commits, diffs, titles/descriptions, date ranges, etc.
+- Config from glin.toml and env variables (for paths if integrating with markdown_tools locally).
 
 ## Outputs
-- Markdown text appended to or created at target path.
-- Structured result dict for tools and tests: path, range of lines written, bullets/sections added, template used, time window, did_add_heading, etc.
+- MCP-compatible message sequences for LLM clients.
+- Optional: when used locally with markdown_tools, a structured result dict for file writes (out of primary scope for Phase 3 prompts).
 
 ## API Surface (initial)
-- Python helpers (not MCP yet):
-  - render_worklog(period: Literal["daily","weekly","sprint"], *, since: str|None, until: str|None, template: str|None) -> str
-  - write_worklog(markdown: str, *, file_path: str|None) -> WriteResult (TypedDict)
-  - generate_worklog(period: Literal["daily","weekly","sprint"], **kwargs) -> WriteResult
-- MCP wrappers (Phase 3 late or Phase 4): mirror helpers and return the WriteResult structure.
+- MCP Prompts (primary):
+  - commit_summary(commits: str, date_range?: str)
+  - diff_summary(diff: str, context?: str)
+  - worklog_entry(date: str, inputs: str)
+  - pr_review_summary(title: str, description?: str, diffs?: str, commits?: str)
+- Python access occurs by importing prompts to register with the shared MCP instance (see glin/mcp_app.py).
 
-## Template Tokens (draft)
-- {{date}}, {{period}}, {{since}}, {{until}}
-- {{highlights}} (bulleted), {{commits}} (grouped), {{stats}} (files, lines added/removed), {{branches}}, {{languages}}
+## Prompt Content Guidelines (draft)
+- System messages emphasize precision, non-invention, bullet lists, and ISO dates.
+- User messages wrap inputs in XML-ish tags (<COMMITS>, <DIFF>, <INPUTS>) for clarity.
 
 ## Risks & Mitigations
-- LLM variability → Provide deterministic test-mode with canned responses and seedable pseudo-LLM.
-- Large diffs → Cap per-commit details; summarize by file/language.
-- Missing data (no commits) → Emit informative stub section, not an error.
+- Misuse of prompts (too-long inputs) → Provide guidance in docs; clients may chunk inputs.
+- Missing data → Prompts instruct the model to state when there is nothing to summarize.
 
 ## Dependencies
-- Phase 1 git utilities (commits, diffs, stats) — DONE per roadmap.
-- Phase 2 storage — DONE per roadmap and used as optional cache.
+- FastMCP server infrastructure (already in project via mcp_app and prompts.py).
 
 ## Out of Scope (Phase 3)
-- Real conversation capture and indexing (Phase 4).
-- Team aggregation, dashboards, and analytics (Phase 5+).
+- Server-side LLM invocation or streaming.
+- Team aggregation dashboards and analytics.
 
 ## Definition of Done
-- Unit tests covering: template rendering, heading insertion, empty-data behavior, highlight detection, and file writing semantics.
-- CLI/MCP: optional; at least Python helpers callable from code/tests.
-- Documentation in README: short usage snippet and config options.
+- Unit tests cover: prompt registration, listing, argument schemas, and rendering message sequences.
+- README includes examples for `list_prompts()` and `get_prompt()` with argument serialization notes.
+- Prompts discoverable at runtime via the shared FastMCP instance.
