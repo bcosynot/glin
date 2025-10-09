@@ -8,6 +8,7 @@ from .mcp_app import mcp
 # Return type definitions for markdown tools
 class MarkdownSuccessResponse(TypedDict):
     """Successful markdown append operation response."""
+
     ok: bool
     path: str
     bullets_added: int
@@ -22,10 +23,13 @@ class MarkdownSuccessResponse(TypedDict):
 
 class MarkdownErrorResponse(TypedDict):
     """Error response from markdown operation."""
+
     error: str
 
 
-def append_to_markdown(content: str, file_path: str | None = None) -> MarkdownSuccessResponse | MarkdownErrorResponse:
+def append_to_markdown(
+    content: str, file_path: str | None = None
+) -> MarkdownSuccessResponse | MarkdownErrorResponse:
     """
     Append lines as bullet points under a date heading in a markdown file.
 
@@ -44,7 +48,9 @@ def append_to_markdown(content: str, file_path: str | None = None) -> MarkdownSu
     """
     try:
         if content is None or str(content).strip() == "":
-            error_response: MarkdownErrorResponse = {"error": "content is required and cannot be empty"}
+            error_response: MarkdownErrorResponse = {
+                "error": "content is required and cannot be empty"
+            }
             return error_response
 
         from datetime import datetime
@@ -181,11 +187,12 @@ def append_to_markdown(content: str, file_path: str | None = None) -> MarkdownSu
         return error_response
 
 
-
 # Register MCP tool wrapper preserving the public name
 @mcp.tool(
     name="append_to_markdown",
-    description="Append content as bullet points under today's date heading in a markdown file. Each non-empty line becomes a bullet. Creates date heading (## YYYY-MM-DD) if missing. Target file can be specified, or defaults to GLIN_MD_PATH env var, or ./WORKLOG.md."
+    description="Append content as bullet points under today's date heading in a markdown file. Each non-empty line becomes a bullet. Creates date heading (## YYYY-MM-DD) if missing. Target file can be specified, or defaults to GLIN_MD_PATH env var, or ./WORKLOG.md.",
 )
-def _tool_append_to_markdown(content: str, file_path: str | None = None) -> MarkdownSuccessResponse | MarkdownErrorResponse:  # pragma: no cover
+def _tool_append_to_markdown(
+    content: str, file_path: str | None = None
+) -> MarkdownSuccessResponse | MarkdownErrorResponse:  # pragma: no cover
     return append_to_markdown(content=content, file_path=file_path)

@@ -2,6 +2,7 @@ import subprocess
 from typing import TypedDict
 
 import glin.git_tools as git_tools
+
 from ..mcp_app import mcp
 
 
@@ -57,10 +58,16 @@ def _get_config_source() -> str:
 
 def get_tracked_email_config() -> EmailConfig:
     emails = git_tools.get_tracked_emails()
-    return {"tracked_emails": emails, "count": len(emails), "source": git_tools._get_config_source()}
+    return {
+        "tracked_emails": emails,
+        "count": len(emails),
+        "source": git_tools._get_config_source(),
+    }
 
 
-def configure_tracked_emails(emails: list[str], method: str = "env") -> ConfigureSuccessResponse | ConfigureErrorResponse:
+def configure_tracked_emails(
+    emails: list[str], method: str = "env"
+) -> ConfigureSuccessResponse | ConfigureErrorResponse:
     try:
         if method == "env":
             git_tools.set_tracked_emails_env(emails)
@@ -80,7 +87,10 @@ def configure_tracked_emails(emails: list[str], method: str = "env") -> Configur
                 "method": "config_file",
                 "config_path": str(cfg_path),
             }
-        return {"success": False, "error": f"Unknown configuration method: {method}. Use 'env' or 'file'"}
+        return {
+            "success": False,
+            "error": f"Unknown configuration method: {method}. Use 'env' or 'file'",
+        }
     except Exception as e:  # noqa: BLE001
         return {"success": False, "error": f"Failed to configure emails: {str(e)}"}
 

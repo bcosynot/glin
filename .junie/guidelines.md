@@ -153,3 +153,40 @@ Housekeeping for this session (2025-10-09)
 - Verified `uv` availability and installed dev dependencies.
 - Ran full test suite successfully.
 - Created, executed, and then removed a temporary demo test for documentation purposes (see Testing section for the exact snippet).
+
+
+---
+
+## Modules and directory structure (updated 2025-10-09)
+
+- Top-level package: `glin/`
+  - `mcp_app.py` — creates and runs the shared FastMCP instance; imports tool modules so their decorators register on the same instance.
+  - `config.py` — configuration helpers (e.g., tracked emails resolution with env/file/git fallbacks).
+  - `markdown_tools.py` — filesystem-safe Markdown utilities (newline normalization, date headings, etc.).
+  - `git_tools/` — NEW: refactored package replacing the previous single-file implementation. Submodules:
+    - `branches.py` — branch-related utilities and MCP tools.
+    - `commits.py` — commit queries and date-range helpers.
+    - `config_tools.py` — tracked-email configuration tools used by MCP.
+    - `diffs.py` — diff and patch helpers.
+    - `files.py` — file-level Git helpers.
+  - Compatibility shim: `git_tools.py` — maintained for backward compatibility; re-exports the public API to preserve existing imports (e.g., `from glin.git_tools import get_commits_by_date`). New code SHOULD prefer explicit imports from `glin.git_tools.<module>`.
+
+Notes
+- Tests were updated to patch module-level functions in the new package layout. When writing tests, patch `glin.git_tools.<module>.<name>` rather than deep internals.
+- The public API is preserved; the shim is intended to ease migration for external users.
+
+## After every task: format and lint
+
+Run Ruff formatter and linter before marking a task complete or opening/refreshing a PR. Use Makefile targets (preferred):
+
+- Format: `make format`  (runs `uv run ruff format`)
+- Lint/fix: `make lint`  (runs `uv run ruff check --fix`)
+
+Alternative direct commands if you are not using Make:
+
+- `uv run ruff format`
+- `uv run ruff check --fix`
+
+Tip: Install the repo-managed pre-commit hook once to auto-run formatting and fixes on commit:
+
+- `make hooks`

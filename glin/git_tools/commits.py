@@ -1,8 +1,8 @@
 import subprocess
 from typing import TypedDict
 
-from . import get_tracked_emails
 from ..mcp_app import mcp
+from . import get_tracked_emails
 
 
 class CommitInfo(TypedDict):
@@ -54,7 +54,6 @@ def _handle_git_error(e: Exception) -> list[ErrorResponse]:
 
 def _get_author_filters() -> list[str]:
     # Local import so test monkeypatching glin.git_tools.get_tracked_emails takes effect
-    from . import get_tracked_emails  # type: ignore
 
     return get_tracked_emails()
 

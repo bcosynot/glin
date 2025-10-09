@@ -1,5 +1,3 @@
-
-
 from glin.git_tools.commits import (
     _build_git_log_command,
     _get_author_filters,
@@ -303,8 +301,7 @@ def test_get_commit_diff_success(monkeypatch):
 
     metadata_output = Completed(
         stdout=(
-            "abc123|Alice Author|alice@example.com|"
-            "2024-01-01 12:00:00 +0000|feat: add new feature"
+            "abc123|Alice Author|alice@example.com|2024-01-01 12:00:00 +0000|feat: add new feature"
         )
     )
 
@@ -464,8 +461,7 @@ def test_get_commit_files_success(monkeypatch):
 
     metadata_output = Completed(
         stdout=(
-            "abc123|Alice Author|alice@example.com|"
-            "2024-01-01 12:00:00 +0000|feat: add new feature"
+            "abc123|Alice Author|alice@example.com|2024-01-01 12:00:00 +0000|feat: add new feature"
         )
     )
 
@@ -863,7 +859,6 @@ def test_get_config_source_environment(monkeypatch):
 
 def test_get_config_source_config_file(monkeypatch, tmp_path):
     """Test config source detection from config file."""
-    import os
 
     monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
 

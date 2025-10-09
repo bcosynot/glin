@@ -39,7 +39,13 @@ def get_current_branch() -> dict:
             except Exception:
                 ahead, behind = 0, 0
 
-        return {"name": name, "detached": detached, "upstream": upstream, "ahead": ahead, "behind": behind}
+        return {
+            "name": name,
+            "detached": detached,
+            "upstream": upstream,
+            "ahead": ahead,
+            "behind": behind,
+        }
     except subprocess.CalledProcessError as e:  # noqa: BLE001
         return {"error": f"Git command failed: {e.stderr}"}
     except Exception as e:  # noqa: BLE001
@@ -48,9 +54,7 @@ def get_current_branch() -> dict:
 
 def list_branches():
     try:
-        fmt = (
-            "%(refname:short)|%(objectname)|%(upstream:short)|%(authorname)|%(authoremail)|%(authordate:iso8601)|%(subject)"
-        )
+        fmt = "%(refname:short)|%(objectname)|%(upstream:short)|%(authorname)|%(authoremail)|%(authordate:iso8601)|%(subject)"
         res = subprocess.run(
             ["git", "for-each-ref", f"--format={fmt}", "refs/heads"],
             capture_output=True,
@@ -89,9 +93,7 @@ def list_branches():
             last_commit: dict | None = {
                 "hash": commit_hash,
                 "author": author,
-                "email": email.strip("<>")
-                if isinstance(email, str)
-                else email,
+                "email": email.strip("<>") if isinstance(email, str) else email,
                 "date": date,
                 "message": subject,
             }

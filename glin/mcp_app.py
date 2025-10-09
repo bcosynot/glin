@@ -6,6 +6,7 @@ import sys
 try:
     from fastmcp import FastMCP  # type: ignore
 except Exception:  # pragma: no cover - used only when fastmcp is unavailable
+
     class FastMCP:  # minimal stub to satisfy tests
         def __init__(self, *_args, **_kwargs) -> None:
             self._tools = []
@@ -21,14 +22,17 @@ except Exception:  # pragma: no cover - used only when fastmcp is unavailable
         def run(self, *args, **kwargs):  # noqa: D401 - compatibility no-op
             return None
 
+
 # Single shared MCP instance used by all tool modules
 mcp = FastMCP("Glin - Your worklog, without the work")
 
 # Import tool modules to register their tools on the shared MCP instance
 # These imports are intentionally placed after `mcp` is created
 # so that decorators can attach to the same instance at import time.
-from . import git_tools as _git_tools  # noqa: F401
-from . import markdown_tools as _markdown_tools  # noqa: F401
+from . import (
+    git_tools as _git_tools,  # noqa: F401
+    markdown_tools as _markdown_tools,  # noqa: F401
+)
 
 
 def run(argv: list[str] | None = None) -> None:
