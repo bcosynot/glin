@@ -1,4 +1,9 @@
-"""Configuration management for Glin."""
+"""Configuration management for Glin.
+
+Phase 2 additions: read-only handling of DB-related environment flags.
+- GLIN_DB_PATH: optional filesystem path to the SQLite database file.
+- GLIN_DB_AUTOWRITE: when truthy, certain integrations may persist data automatically.
+"""
 
 import os
 import subprocess
@@ -28,7 +33,11 @@ def get_tracked_emails() -> list[str]:
     if config_emails:
         return config_emails
 
-    # 3. Fallback to git configuration (current behavior)
+    # 3. In CI environments, avoid relying on git; default to empty list
+    if _is_ci():
+        return []
+
+    # 4. Fallback to git configuration (developer machines)
     git_pattern = _get_git_author_pattern()
     if git_pattern:
         return [git_pattern]
@@ -162,3 +171,49 @@ track_emails = {emails_array}
 
     config_path.write_text(content)
     return config_path
+
+
+# --- Phase 2: Integration flags (read-only helpers) -------------------------
+
+
+def _is_ci() -> bool:
+    """Return True when running in a CI environment (e.g., GitHub Actions).
+
+    We detect common CI signals to choose safer defaults that avoid relying
+    on local developer configuration (like git user.email).
+    """
+    ci = os.getenv("CI")
+    gha = os.getenv("GITHUB_ACTIONS")
+    return (ci or "").lower() in {"1", "true", "yes", "on"} or (gha or "").lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def get_db_path() -> str:
+    """Return the DB path to use for SQLite storage.
+
+    Precedence:
+    1. GLIN_DB_PATH if set (respects exact value, including ":memory:")
+    2. Sensible default: ~/.glin/db.sqlite3
+
+    This function is read-only; it does not create files or directories.
+    """
+    value = os.getenv("GLIN_DB_PATH")
+    if value and value.strip():
+        return value.strip()
+    # Default to a stable path in user home for CI and local runs.
+    return "~/.glin/db.sqlite3"
+
+
+def get_db_autowrite() -> bool:
+    """Return True if GLIN_DB_AUTOWRITE is a truthy value.
+
+    Accepted truthy values (case-insensitive): '1', 'true', 'yes', 'on'.
+    """
+    val = os.getenv("GLIN_DB_AUTOWRITE")
+    if val is None:
+        return False
+    return val.strip().lower() in {"1", "true", "yes", "on"}

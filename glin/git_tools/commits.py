@@ -58,6 +58,38 @@ def _get_author_filters() -> list[str]:
     return _get()
 
 
+def _maybe_autowrite(commits: list[CommitInfo]) -> None:
+    """Optionally persist commits to storage if GLIN_DB_AUTOWRITE is truthy.
+
+    This is a best-effort side effect and failures are swallowed to avoid
+    impacting the primary git query behavior.
+    """
+    try:
+        # Local imports to avoid heavy deps and to make monkeypatching easy in tests
+        from ..config import get_db_autowrite, get_db_path  # type: ignore
+
+        if not get_db_autowrite():
+            return
+        from ..storage.commits import bulk_upsert_commits  # type: ignore
+
+        db_path = get_db_path()
+        # Map CommitInfo -> minimal CommitInput
+        payload = [
+            {
+                "sha": c["hash"],
+                "author_name": c.get("author", ""),
+                "author_email": "",  # unknown from git log format here
+                "author_date": c.get("date", ""),
+                "message": c.get("message", ""),
+            }
+            for c in commits
+        ]
+        bulk_upsert_commits(payload, db_path=db_path)
+    except Exception:
+        # Silently ignore; logging could be added later
+        return
+
+
 def get_recent_commits(count: int = 10) -> list[CommitInfo | ErrorResponse]:
     try:
         author_filters = _get_author_filters()
@@ -65,7 +97,9 @@ def get_recent_commits(count: int = 10) -> list[CommitInfo | ErrorResponse]:
             return [NO_EMAIL_ERROR]
         cmd = _build_git_log_command([f"-{count}"], author_filters)
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        return _parse_commit_lines(result.stdout)
+        commits = _parse_commit_lines(result.stdout)
+        _maybe_autowrite(commits)
+        return commits
     except Exception as e:  # noqa: BLE001
         return _handle_git_error(e)
 
@@ -80,7 +114,10 @@ def get_commits_by_date(
         cmd = _build_git_log_command([f"--since={since}", f"--until={until}"], author_filters)
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         commits = _parse_commit_lines(result.stdout)
-        return commits if commits else [{"info": "No commits found in date range"}]
+        if commits:
+            _maybe_autowrite(commits)
+            return commits
+        return [{"info": "No commits found in date range"}]
     except Exception as e:  # noqa: BLE001
         return _handle_git_error(e)
 
