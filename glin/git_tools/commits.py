@@ -90,7 +90,7 @@ def _maybe_autowrite(commits: list[CommitInfo]) -> None:
         return
 
 
-def get_recent_commits(count: int = 10) -> list[CommitInfo | ErrorResponse]:
+def get_recent_commits(count: int = 10) -> list[CommitInfo | ErrorResponse | InfoResponse]:
     try:
         author_filters = _get_author_filters()
         if not author_filters:
@@ -98,8 +98,10 @@ def get_recent_commits(count: int = 10) -> list[CommitInfo | ErrorResponse]:
         cmd = _build_git_log_command([f"-{count}"], author_filters)
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         commits = _parse_commit_lines(result.stdout)
-        _maybe_autowrite(commits)
-        return commits
+        if commits:
+            _maybe_autowrite(commits)
+            return commits
+        return [{"info": "No recent commits found"}]
     except Exception as e:  # noqa: BLE001
         return _handle_git_error(e)
 
@@ -122,7 +124,9 @@ def get_commits_by_date(
         return _handle_git_error(e)
 
 
-def get_branch_commits(branch: str, count: int = 10) -> list[CommitInfo | ErrorResponse]:
+def get_branch_commits(
+    branch: str, count: int = 10
+) -> list[CommitInfo | ErrorResponse | InfoResponse]:
     try:
         author_filters = _get_author_filters()
         if not author_filters:
@@ -130,7 +134,10 @@ def get_branch_commits(branch: str, count: int = 10) -> list[CommitInfo | ErrorR
         base_args = [branch, f"-{count}"]
         cmd = _build_git_log_command(base_args, author_filters)
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        return _parse_commit_lines(result.stdout)
+        commits = _parse_commit_lines(result.stdout)
+        if commits:
+            return commits
+        return [{"info": f"No commits found on branch {branch}"}]
     except Exception as e:  # noqa: BLE001
         return _handle_git_error(e)
 
@@ -146,7 +153,7 @@ def get_branch_commits(branch: str, count: int = 10) -> list[CommitInfo | ErrorR
 )
 def _tool_get_recent_commits(
     count: int = 10,
-) -> list[CommitInfo | ErrorResponse]:  # pragma: no cover
+) -> list[CommitInfo | ErrorResponse | InfoResponse]:  # pragma: no cover
     return get_recent_commits(count=count)
 
 
