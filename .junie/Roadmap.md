@@ -36,8 +36,8 @@ Build an MCP server that automatically generates developer worklogs by capturing
 **Goal**: Comprehensive git history analysis
 
 - [x] Add commit diff retrieval
-- [ ] File change tracking per commit
-- [ ] Branch information and tracking
+- [x] File change tracking per commit
+- [x] Branch information and tracking
 - [ ] PR/merge commit detection
 - [ ] Statistics: lines changed, files modified, languages
 - [ ] Commit categorization (feat, fix, refactor, etc.)
