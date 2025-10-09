@@ -71,6 +71,7 @@ _LANG_MAP = {
 }
 
 _CONVENTIONAL_TYPES = {
+    # Standard Conventional Commit types
     "feat",
     "fix",
     "chore",
@@ -82,6 +83,17 @@ _CONVENTIONAL_TYPES = {
     "ci",
     "style",
     "revert",
+    # Extended types requested by users/teams (accept case-insensitively)
+    "added",
+    "updated",
+    "fixed",
+    "refactored",
+    "task",
+    "wip",
+    "debugging",
+    "bugfix",
+    "investigating",
+    "investigation",
 }
 
 
@@ -201,7 +213,8 @@ def _infer_language(path: str) -> str:
 
 
 _CONVENTIONAL_RE = re.compile(
-    r"^(?P<type>[a-z]+)(?P<bang>!)?(?:\((?P<scope>[^)]+)\))?:\s*(?P<desc>.+)"
+    r"^(?P<type>[a-z]+)(?P<bang>!)?(?:\((?P<scope>[^)]+)\))?:\s*(?P<desc>.+)",
+    re.IGNORECASE,
 )
 
 
@@ -222,7 +235,8 @@ def categorize_commit(message_or_hash: str, is_hash: bool = False) -> Categoriza
                 "raw": raw,
                 **({"hash": message_or_hash} if is_hash else {}),
             }
-        ctype = m.group("type")
+        ctype_raw = m.group("type")
+        ctype = ctype_raw.lower()
         scope = m.group("scope")
         desc = m.group("desc")
         conventional = ctype in _CONVENTIONAL_TYPES
