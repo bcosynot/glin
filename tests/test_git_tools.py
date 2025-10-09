@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from glin.git_tools import _get_author_filters, get_recent_commits, get_commits_by_date, get_tracked_email_config, configure_tracked_emails
+from glin.git_tools import _get_author_filters, get_recent_commits, get_commits_by_date, get_tracked_email_config, configure_tracked_emails, get_commit_diff
 
 
 class FakeCPError(Exception):
@@ -38,7 +38,7 @@ def make_run(outputs: list[tuple[list[str], Completed | Exception]]):
 def test_get_author_filters_from_config(monkeypatch):
     """Test that _get_author_filters uses the configuration system."""
     from unittest.mock import patch
-    
+
     with patch('glin.git_tools.get_tracked_emails', return_value=['user1@example.com', 'user2@example.com']):
         filters = _get_author_filters()
         assert filters == ['user1@example.com', 'user2@example.com']
@@ -47,7 +47,7 @@ def test_get_author_filters_from_config(monkeypatch):
 def test_get_author_filters_empty_when_no_config(monkeypatch):
     """Test that _get_author_filters returns empty list when no config."""
     from unittest.mock import patch
-    
+
     with patch('glin.git_tools.get_tracked_emails', return_value=[]):
         filters = _get_author_filters()
         assert filters == []
@@ -202,7 +202,7 @@ def test_get_commits_by_date_no_author_config(monkeypatch):
 def test_get_tracked_email_config():
     """Test getting current email configuration."""
     from unittest.mock import patch
-    
+
     with patch('glin.git_tools.get_tracked_emails', return_value=['user1@example.com', 'user2@example.com']):
         with patch('glin.git_tools._get_config_source', return_value='environment_variable'):
             config = get_tracked_email_config()
@@ -215,7 +215,7 @@ def test_configure_tracked_emails_env():
     """Test configuring emails via environment variable."""
     emails = ['test1@example.com', 'test2@example.com']
     result = configure_tracked_emails(emails, method='env')
-    
+
     assert result['success'] is True
     assert result['emails'] == emails
     assert result['method'] == 'environment_variable'
@@ -227,14 +227,14 @@ def test_configure_tracked_emails_file():
     import tempfile
     from pathlib import Path
     from unittest.mock import patch
-    
+
     emails = ['test1@example.com', 'test2@example.com']
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         expected_path = Path(tmpdir) / "glin.toml"
         with patch('glin.git_tools.create_config_file', return_value=expected_path) as mock_create:
             result = configure_tracked_emails(emails, method='file')
-            
+
             assert result['success'] is True
             assert result['emails'] == emails
             assert result['method'] == 'config_file'
@@ -245,6 +245,159 @@ def test_configure_tracked_emails_invalid_method():
     """Test configuring emails with invalid method."""
     emails = ['test@example.com']
     result = configure_tracked_emails(emails, method='invalid')
-    
+
     assert result['success'] is False
     assert 'Unknown configuration method' in result['error']
+
+
+def test_get_commit_diff_success(monkeypatch):
+    """Test successful commit diff retrieval."""
+    import subprocess
+
+    metadata_output = Completed(
+        stdout="abc123|Alice Author|alice@example.com|2024-01-01 12:00:00 +0000|feat: add new feature"
+    )
+
+    diff_output = Completed(
+        stdout="""diff --git a/file.py b/file.py
+index 1234567..abcdefg 100644
+--- a/file.py
++++ b/file.py
+@@ -1,3 +1,4 @@
+ def hello():
++    print("world")
+     pass
+"""
+    )
+
+    stats_output = Completed(
+        stdout=" file.py | 1 +\n 1 file changed, 1 insertion(+)"
+    )
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        make_run([
+            (["git", "show", "--no-patch"], metadata_output),
+            (["git", "show", "-U3"], diff_output),
+            (["git", "show", "--stat"], stats_output),
+        ]),
+    )
+
+    result = get_commit_diff("abc123")
+
+    assert result["hash"] == "abc123"
+    assert result["author"] == "Alice Author"
+    assert result["email"] == "alice@example.com"
+    assert result["date"] == "2024-01-01 12:00:00 +0000"
+    assert result["message"] == "feat: add new feature"
+    assert "diff --git" in result["diff"]
+    assert "file.py" in result["stats"]
+
+
+def test_get_commit_diff_custom_context(monkeypatch):
+    """Test commit diff with custom context lines."""
+    import subprocess
+
+    metadata_output = Completed(
+        stdout="def456|Bob Builder|bob@example.com|2024-01-02 14:00:00 +0000|fix: bug fix"
+    )
+
+    diff_output = Completed(stdout="diff content")
+    stats_output = Completed(stdout="stats content")
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        make_run([
+            (["git", "show", "--no-patch"], metadata_output),
+            (["git", "show", "-U5"], diff_output),
+            (["git", "show", "--stat"], stats_output),
+        ]),
+    )
+
+    result = get_commit_diff("def456", context_lines=5)
+
+    assert result["hash"] == "def456"
+    assert result["message"] == "fix: bug fix"
+
+
+def test_get_commit_diff_not_found(monkeypatch):
+    """Test commit diff when commit doesn't exist."""
+    import subprocess
+
+    metadata_output = Completed(stdout="")
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        make_run([
+            (["git", "show", "--no-patch"], metadata_output),
+        ]),
+    )
+
+    result = get_commit_diff("nonexistent")
+
+    assert "error" in result
+    assert "not found" in result["error"]
+
+
+def test_get_commit_diff_subprocess_error(monkeypatch):
+    """Test commit diff handles subprocess errors."""
+    import subprocess
+
+    cp_err = subprocess.CalledProcessError(
+        128,
+        ["git", "show"],
+        output="",
+        stderr="fatal: bad object nonexistent"
+    )
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        make_run([
+            (["git", "show"], cp_err),
+        ]),
+    )
+
+    result = get_commit_diff("badcommit")
+
+    assert "error" in result
+    assert "Git command failed" in result["error"]
+
+
+def test_get_commit_diff_parse_error(monkeypatch):
+    """Test commit diff handles metadata parsing errors."""
+    import subprocess
+
+    # Malformed metadata (missing fields)
+    metadata_output = Completed(stdout="abc123|Alice")
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        make_run([
+            (["git", "show", "--no-patch"], metadata_output),
+        ]),
+    )
+
+    result = get_commit_diff("abc123")
+
+    assert "error" in result
+    assert "Failed to parse commit metadata" in result["error"]
+
+
+def test_get_commit_diff_general_exception(monkeypatch):
+    """Test commit diff handles general exceptions."""
+    import subprocess
+
+    def failing_run(*args, **kwargs):
+        raise RuntimeError("Unexpected error")
+
+    monkeypatch.setattr(subprocess, "run", failing_run)
+
+    result = get_commit_diff("abc123")
+
+    assert "error" in result
+    assert "Failed to get commit diff" in result["error"]

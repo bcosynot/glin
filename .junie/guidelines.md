@@ -24,7 +24,10 @@ This document captures build, testing, and development conventions that are spec
   - Transports:
     - Default transport: `stdio`
     - HTTP transport: pass `--transport http` to `run()`; the server will bind to port 8000. The logic lives in `glin/mcp_app.py` lines 16–27.
-  - Example:
+  - Make targets (recommended):
+    - `make run-stdio` → runs `uv run python main.py` (stdio transport, default)
+    - `make run-http` → runs `uv run python main.py --transport http` (HTTP transport on port 8000)
+  - Manual execution examples:
     - `python -m glin.mcp_app` (stdio) — if you add your own CLI.
     - `python main.py` (stdio), or `python -c "from glin.mcp_app import run; run(['script.py','--transport','http'])"` (HTTP).
 
@@ -141,6 +144,8 @@ This document captures build, testing, and development conventions that are spec
 - Format: `make format`
 - Lint/fix: `make lint`
 - Install git hook: `make hooks`
+- Run MCP server (stdio): `make run-stdio`
+- Run MCP server (HTTP): `make run-http`
 
 ---
 

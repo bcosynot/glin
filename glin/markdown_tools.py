@@ -1,12 +1,31 @@
-from __future__ import annotations
-
 import os
 from pathlib import Path
+from typing import TypedDict
 
 from .mcp_app import mcp
 
 
-def append_to_markdown(content: str, file_path: str | None = None) -> dict:
+# Return type definitions for markdown tools
+class MarkdownSuccessResponse(TypedDict):
+    """Successful markdown append operation response."""
+    ok: bool
+    path: str
+    bullets_added: int
+    content_added: list[str]
+    line_numbers_added: list[int]
+    heading: str
+    heading_added: bool
+    heading_line_number: int | None
+    used_env: bool
+    defaulted: bool
+
+
+class MarkdownErrorResponse(TypedDict):
+    """Error response from markdown operation."""
+    error: str
+
+
+def append_to_markdown(content: str, file_path: str | None = None) -> MarkdownSuccessResponse | MarkdownErrorResponse:
     """
     Append lines as bullet points under a date heading in a markdown file.
 
@@ -25,7 +44,8 @@ def append_to_markdown(content: str, file_path: str | None = None) -> dict:
     """
     try:
         if content is None or str(content).strip() == "":
-            return {"error": "content is required and cannot be empty"}
+            error_response: MarkdownErrorResponse = {"error": "content is required and cannot be empty"}
+            return error_response
 
         from datetime import datetime
 
@@ -43,7 +63,8 @@ def append_to_markdown(content: str, file_path: str | None = None) -> dict:
         lines = [ln.strip() for ln in text.split("\n")]
         bullets = [f"- {ln}" for ln in lines if ln != ""]
         if not bullets:
-            return {"error": "content contained only blank lines"}
+            error_response: MarkdownErrorResponse = {"error": "content contained only blank lines"}
+            return error_response
 
         # Prepare date heading
         today = datetime.now().date().isoformat()
@@ -142,7 +163,7 @@ def append_to_markdown(content: str, file_path: str | None = None) -> dict:
 
         path.write_text(new_content, encoding="utf-8")
 
-        return {
+        success_response: MarkdownSuccessResponse = {
             "ok": True,
             "path": str(path),
             "bullets_added": len(bullets),
@@ -154,12 +175,17 @@ def append_to_markdown(content: str, file_path: str | None = None) -> dict:
             "used_env": file_path is None and bool(os.getenv("GLIN_MD_PATH")),
             "defaulted": file_path is None and os.getenv("GLIN_MD_PATH") is None,
         }
+        return success_response
     except Exception as e:
-        return {"error": f"Failed to append to markdown: {e}"}
+        error_response: MarkdownErrorResponse = {"error": f"Failed to append to markdown: {e}"}
+        return error_response
 
 
 
 # Register MCP tool wrapper preserving the public name
-@mcp.tool(name="append_to_markdown")
-def _tool_append_to_markdown(content: str, file_path: str | None = None) -> dict:  # pragma: no cover
+@mcp.tool(
+    name="append_to_markdown",
+    description="Append content as bullet points under today's date heading in a markdown file. Each non-empty line becomes a bullet. Creates date heading (## YYYY-MM-DD) if missing. Target file can be specified, or defaults to GLIN_MD_PATH env var, or ./WORKLOG.md."
+)
+def _tool_append_to_markdown(content: str, file_path: str | None = None) -> MarkdownSuccessResponse | MarkdownErrorResponse:  # pragma: no cover
     return append_to_markdown(content=content, file_path=file_path)
