@@ -36,7 +36,7 @@ _message_cols = "id, conversation_id, role, content, created_at"
 def list_messages(conversation_id: int, db_path: str | None = None) -> list[Message]:
     with get_connection(db_path) as conn:
         rows = conn.execute(
-            f"SELECT {essage_cols} FROM messages WHERE conversation_id = ? ORDER BY id ASC",
+            f"SELECT {_message_cols} FROM messages WHERE conversation_id = ? ORDER BY id ASC",
             (conversation_id,),
         ).fetchall()
         return [Message(**dict(r)) for r in rows]
