@@ -1,4 +1,4 @@
-from typing import Iterable, Sequence
+from collections.abc import Iterable, Sequence
 
 from .db import get_connection
 from .types import (
@@ -157,10 +157,13 @@ def query_commits_by_date(
         rows = conn.execute(base_sql, params).fetchall()
         if not rows:
             return [InfoResponse(info="No commits found in date range")]
-        return [GitCommitInfo(hash=r[0], author=r[1] or "", date=r[2], message=r[3] or "") for r in rows]
+        return [
+            GitCommitInfo(hash=r[0], author=r[1] or "", date=r[2], message=r[3] or "") for r in rows
+        ]
 
 
 # --- Helpers ---------------------------------------------------------------
+
 
 def _upsert_commit_file(conn, commit_id: int, f: CommitFileChange) -> None:
     additions = int(f.get("additions", 0) or 0)
@@ -181,6 +184,7 @@ def _upsert_commit_file(conn, commit_id: int, f: CommitFileChange) -> None:
 
 
 # Back-compat helpers kept for existing call sites
+
 
 def insert_commit(
     *,

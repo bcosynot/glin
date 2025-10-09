@@ -87,3 +87,18 @@ class Conversation(TypedDict, total=False):
     title: NotRequired[str]
     created_at: NotRequired[str]
     updated_at: NotRequired[str]
+
+
+class ConversationQuery(TypedDict, total=False):
+    """Basic filters and options for querying conversations."""
+
+    ids: list[int]
+    title_contains: str
+    created_from: str  # ISO 8601 or SQLite-compatible datetime string
+    created_until: str
+    updated_from: str
+    updated_until: str
+    order_by: Literal["created_at", "updated_at", "id"]
+    order: Literal["asc", "desc"]
+    limit: int
+    offset: int
