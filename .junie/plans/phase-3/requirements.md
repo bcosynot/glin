@@ -1,4 +1,4 @@
-# Phase 3: Worklog Generation — Requirements (Prompt-Centric)
+# Phase 3: Worklog Generation — Requirements
 
 Source: .junie/Roadmap.md (Last updated: 2025-10-09)
 
