@@ -33,7 +33,11 @@ def get_tracked_emails() -> list[str]:
     if config_emails:
         return config_emails
 
-    # 3. Fallback to git configuration (current behavior)
+    # 3. In CI environments, avoid relying on git; default to empty list
+    if _is_ci():
+        return []
+
+    # 4. Fallback to git configuration (developer machines)
     git_pattern = _get_git_author_pattern()
     if git_pattern:
         return [git_pattern]
@@ -172,14 +176,36 @@ track_emails = {emails_array}
 # --- Phase 2: Integration flags (read-only helpers) -------------------------
 
 
-def get_db_path() -> str | None:
-    """Return the DB path from GLIN_DB_PATH if set, else None.
+def _is_ci() -> bool:
+    """Return True when running in a CI environment (e.g., GitHub Actions).
 
-    This function is read-only and does not create files or directories.
-    Other modules may choose their own defaults when this returns None.
+    We detect common CI signals to choose safer defaults that avoid relying
+    on local developer configuration (like git user.email).
+    """
+    ci = os.getenv("CI")
+    gha = os.getenv("GITHUB_ACTIONS")
+    return (ci or "").lower() in {"1", "true", "yes", "on"} or (gha or "").lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def get_db_path() -> str:
+    """Return the DB path to use for SQLite storage.
+
+    Precedence:
+    1. GLIN_DB_PATH if set (respects exact value, including ":memory:")
+    2. Sensible default: ~/.glin/db.sqlite3
+
+    This function is read-only; it does not create files or directories.
     """
     value = os.getenv("GLIN_DB_PATH")
-    return value.strip() if value else None
+    if value and value.strip():
+        return value.strip()
+    # Default to a stable path in user home for CI and local runs.
+    return "~/.glin/db.sqlite3"
 
 
 def get_db_autowrite() -> bool:
