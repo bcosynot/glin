@@ -1,19 +1,21 @@
 
 
-from glin.git_tools import (
+from glin.git_tools.commits import (
     _build_git_log_command,
-    _check_git_config,
     _get_author_filters,
-    _get_config_source,
     _handle_git_error,
     _parse_commit_lines,
-    configure_tracked_emails,
-    get_commit_diff,
-    get_commit_files,
     get_commits_by_date,
     get_recent_commits,
+)
+from glin.git_tools.config_tools import (
+    _check_git_config,
+    _get_config_source,
+    configure_tracked_emails,
     get_tracked_email_config,
 )
+from glin.git_tools.diffs import get_commit_diff
+from glin.git_tools.files import get_commit_files
 
 
 class FakeCPError(Exception):
@@ -878,11 +880,12 @@ def test_get_config_source_config_file(monkeypatch, tmp_path):
     assert "glin.toml" in source
 
 
-def test_get_config_source_git_user_email(monkeypatch):
+def test_get_config_source_git_user_email(monkeypatch, tmp_path):
     """Test config source detection from git user.email."""
     import subprocess
 
     monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
+    monkeypatch.chdir(tmp_path)
 
     def mock_run(cmd, **kwargs):
         if cmd == ["git", "config", "--get", "user.email"]:
@@ -896,11 +899,12 @@ def test_get_config_source_git_user_email(monkeypatch):
     assert source == "git_user_email"
 
 
-def test_get_config_source_git_user_name(monkeypatch):
+def test_get_config_source_git_user_name(monkeypatch, tmp_path):
     """Test config source detection from git user.name."""
     import subprocess
 
     monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
+    monkeypatch.chdir(tmp_path)
 
     def mock_run(cmd, **kwargs):
         if cmd == ["git", "config", "--get", "user.email"]:
@@ -916,11 +920,12 @@ def test_get_config_source_git_user_name(monkeypatch):
     assert source == "git_user_name"
 
 
-def test_get_config_source_none(monkeypatch):
+def test_get_config_source_none(monkeypatch, tmp_path):
     """Test config source detection when no config exists."""
     import subprocess
 
     monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
+    monkeypatch.chdir(tmp_path)
 
     def mock_run(cmd, **kwargs):
         raise subprocess.CalledProcessError(1, cmd)
