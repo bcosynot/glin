@@ -1,5 +1,5 @@
 import subprocess
-from typing import TypedDict
+from typing import TypedDict, NotRequired
 
 from .config import create_config_file, get_tracked_emails, set_tracked_emails_env
 from .mcp_app import mcp
@@ -97,6 +97,36 @@ class CommitFilesSuccess(TypedDict):
 class CommitFilesError(TypedDict):
     """Error response from commit files operation."""
 
+    error: str
+
+
+# Branch-related types
+class BranchCommit(TypedDict):
+    hash: str
+    author: str
+    email: str
+    date: str
+    message: str
+
+
+class BranchInfo(TypedDict):
+    name: str
+    is_current: bool
+    upstream: str | None
+    ahead: int
+    behind: int
+    last_commit: BranchCommit | None
+
+
+class BranchStatus(TypedDict):
+    name: str
+    detached: bool
+    upstream: str | None
+    ahead: int
+    behind: int
+
+
+class BranchError(TypedDict):
     error: str
 
 
@@ -506,6 +536,141 @@ def _get_config_source() -> str:
     return "none"
 
 
+# ---------------- Branch information and tracking ---------------- #
+
+def get_current_branch() -> BranchStatus | BranchError:
+    """Return current branch name and status (detached, upstream, ahead/behind)."""
+    try:
+        # Branch name or 'HEAD' when detached
+        name_res = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, check=True
+        )
+        name = name_res.stdout.strip()
+        detached = name == "HEAD"
+
+        # Try upstream
+        upstream = None
+        try:
+            up_res = subprocess.run(
+                ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            upstream = up_res.stdout.strip() or None
+        except subprocess.CalledProcessError:
+            upstream = None
+
+        ahead = 0
+        behind = 0
+        if upstream:
+            try:
+                cnt = subprocess.run(
+                    ["git", "rev-list", "--left-right", "--count", f"{name}...{upstream}"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                left, right = cnt.stdout.strip().split()
+                ahead = int(left)
+                behind = int(right)
+            except Exception:
+                ahead, behind = 0, 0
+
+        return {"name": name, "detached": detached, "upstream": upstream, "ahead": ahead, "behind": behind}
+    except subprocess.CalledProcessError as e:
+        return {"error": f"Git command failed: {e.stderr}"}
+    except Exception as e:
+        return {"error": f"Failed to get current branch: {str(e)}"}
+
+
+def list_branches() -> list[BranchInfo] | list[BranchError]:
+    """List local branches with upstream and ahead/behind and last commit info."""
+    try:
+        # Use for-each-ref to get bulk info
+        fmt = (
+            "%(refname:short)|%(objectname)|%(upstream:short)|%(authorname)|%(authoremail)|%(authordate:iso8601)|%(subject)"
+        )
+        res = subprocess.run(
+            ["git", "for-each-ref", f"--format={fmt}", "refs/heads"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        branches: list[BranchInfo] = []
+
+        # Determine current branch
+        cur_res = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, check=True
+        )
+        current = cur_res.stdout.strip()
+
+        for line in res.stdout.strip().split("\n"):
+            if not line:
+                continue
+            name, commit_hash, upstream, author, email, date, subject = line.split("|", 6)
+            upstream = upstream or None
+
+            # ahead/behind if upstream exists
+            ahead = 0
+            behind = 0
+            if upstream:
+                try:
+                    cnt = subprocess.run(
+                        ["git", "rev-list", "--left-right", "--count", f"{name}...{upstream}"],
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                    )
+                    left, right = cnt.stdout.strip().split()
+                    ahead = int(left)
+                    behind = int(right)
+                except Exception:
+                    ahead, behind = 0, 0
+
+            last_commit: BranchCommit | None = {
+                "hash": commit_hash,
+                "author": author,
+                "email": email.strip("<>"),
+                "date": date,
+                "message": subject,
+            }
+
+            branches.append(
+                {
+                    "name": name,
+                    "is_current": name == current,
+                    "upstream": upstream,
+                    "ahead": ahead,
+                    "behind": behind,
+                    "last_commit": last_commit,
+                }
+            )
+
+        return branches
+    except subprocess.CalledProcessError as e:
+        return [{"error": f"Git command failed: {e.stderr}"}]
+    except Exception as e:
+        return [{"error": f"Failed to list branches: {str(e)}"}]
+
+
+def get_branch_commits(
+    branch: str, count: int = 10
+) -> list[CommitInfo | ErrorResponse]:
+    """Get recent commits on a specific branch, filtered by tracked emails."""
+    try:
+        author_filters = _get_author_filters()
+        if not author_filters:
+            return [NO_EMAIL_ERROR]
+
+        base_args = [branch, f"-{count}"]
+        cmd = _build_git_log_command(base_args, author_filters)
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        return _parse_commit_lines(result.stdout)
+    except Exception as e:
+        return _handle_git_error(e)
+
+
 # Register MCP tool wrappers preserving public names
 @mcp.tool(
     name="get_recent_commits",
@@ -588,3 +753,36 @@ def _tool_get_commit_diff(
 )
 def _tool_get_commit_files(commit_hash: str) -> dict:  # pragma: no cover
     return get_commit_files(commit_hash=commit_hash)
+
+
+@mcp.tool(
+    name="get_current_branch",
+    description=(
+        "Get the current git branch information, including whether HEAD is detached, "
+        "the upstream (if any), and ahead/behind counts versus upstream."
+    ),
+)
+def _tool_get_current_branch() -> dict:  # pragma: no cover
+    return get_current_branch()
+
+
+@mcp.tool(
+    name="list_branches",
+    description=(
+        "List local branches with upstream, ahead/behind counts, and last commit metadata. "
+        "The current branch is marked in the response."
+    ),
+)
+def _tool_list_branches() -> list[dict]:  # pragma: no cover
+    return list_branches()  # type: ignore[return-value]
+
+
+@mcp.tool(
+    name="get_branch_commits",
+    description=(
+        "Get recent commits for a specific branch filtered by configured tracked emails. "
+        "Returns the same structure as get_recent_commits."
+    ),
+)
+def _tool_get_branch_commits(branch: str, count: int = 10) -> list[dict]:  # pragma: no cover
+    return get_branch_commits(branch=branch, count=count)  # type: ignore[return-value]
