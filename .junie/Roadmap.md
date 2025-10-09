@@ -35,7 +35,7 @@ Build an MCP server that automatically generates developer worklogs by capturing
 ### Phase 1: Enhanced Git Integration (v0.2.0)
 **Goal**: Comprehensive git history analysis
 
-- [ ] Add commit diff retrieval
+- [x] Add commit diff retrieval
 - [ ] File change tracking per commit
 - [ ] Branch information and tracking
 - [ ] PR/merge commit detection
@@ -47,22 +47,7 @@ Build an MCP server that automatically generates developer worklogs by capturing
 
 ---
 
-### Phase 2: AI Conversation Capture (v0.3.0)
-**Goal**: Capture and index AI assistant interactions
-
-- [ ] MCP client conversation logging
-- [ ] Prompt/response storage format
-- [ ] Session tracking and grouping
-- [ ] Metadata extraction (timestamps, topics, file references)
-- [ ] Privacy controls and filtering
-- [ ] Support for multiple AI platforms (Claude, GPT, etc.)
-- [ ] Conversation search and retrieval tools
-
-**Timeline**: 3-4 weeks
-
----
-
-### Phase 3: Data Storage & Persistence (v0.4.0)
+### Phase 2: Data Storage & Persistence (v0.4.0)
 **Goal**: Reliable local data storage
 
 - [ ] SQLite database schema design
@@ -77,7 +62,7 @@ Build an MCP server that automatically generates developer worklogs by capturing
 
 ---
 
-### Phase 4: Worklog Generation (v0.5.0)
+### Phase 3: Worklog Generation (v0.5.0)
 **Goal**: Transform raw data into human-readable worklogs
 
 - [ ] Natural language summarization (using LLM)
@@ -87,6 +72,19 @@ Build an MCP server that automatically generates developer worklogs by capturing
 - [ ] Time-based activity grouping
 - [ ] Custom filters (by project, date, file type)
 - [ ] Export formats (Markdown, JSON, HTML, PDF)
+
+**Timeline**: 3-4 weeks
+
+### Phase 4: AI Conversation Capture (v0.3.0)
+**Goal**: Capture and index AI assistant interactions
+
+- [ ] MCP client conversation logging
+- [ ] Prompt/response storage format
+- [ ] Session tracking and grouping
+- [ ] Metadata extraction (timestamps, topics, file references)
+- [ ] Privacy controls and filtering
+- [ ] Support for multiple AI platforms (Claude, GPT, etc.)
+- [ ] Conversation search and retrieval tools
 
 **Timeline**: 3-4 weeks
 
@@ -106,19 +104,6 @@ Build an MCP server that automatically generates developer worklogs by capturing
 **Timeline**: 3-4 weeks
 
 ---
-
-### Phase 6: Integration & Automation (v0.7.0)
-**Goal**: Seamless workflow integration
-
-- [ ] Slack/Discord standup bot integration
-- [ ] Jira/Linear ticket linking
-- [ ] Calendar integration for meetings
-- [ ] GitHub PR descriptions auto-generation
-- [ ] Automated standup reports
-- [ ] Webhook support for custom integrations
-- [ ] CLI enhancements for quick queries
-
-**Timeline**: 3-4 weeks
 
 ---
 
