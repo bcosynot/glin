@@ -38,10 +38,10 @@ Build an MCP server that automatically generates developer worklogs by capturing
 - [x] Add commit diff retrieval
 - [x] File change tracking per commit
 - [x] Branch information and tracking
-- [ ] PR/merge commit detection
-- [ ] Statistics: lines changed, files modified, languages
-- [ ] Commit categorization (feat, fix, refactor, etc.)
-- [ ] Git blame integration for context
+- [x] PR/merge commit detection
+- [x] Statistics: lines changed, files modified, languages
+- [x] Commit categorization (feat, fix, refactor, etc.)
+- [x] Git blame integration for context
 
 **Timeline**: 2-3 weeks
 
