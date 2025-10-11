@@ -188,11 +188,57 @@ def append_to_markdown(
 
 
 # Register MCP tool wrapper preserving the public name
+from fastmcp import Context  # type: ignore
+
+
 @mcp.tool(
     name="append_to_markdown",
     description="Append content as bullet points under today's date heading in a markdown file. Each non-empty line becomes a bullet. Creates date heading (## YYYY-MM-DD) if missing. Target file can be specified, or defaults to GLIN_MD_PATH env var, or ./WORKLOG.md.",
 )
-def _tool_append_to_markdown(
-    content: str, file_path: str | None = None
+async def _tool_append_to_markdown(
+    content: str, file_path: str | None = None, ctx: Context | None = None
 ) -> MarkdownSuccessResponse | MarkdownErrorResponse:  # pragma: no cover
-    return append_to_markdown(content=content, file_path=file_path)
+    # Start logging
+    if ctx:
+        non_empty_lines = sum(1 for ln in str(content).splitlines() if ln.strip())
+        await ctx.info(
+            "Appending to markdown",
+            extra={
+                "tool": "append_to_markdown",
+                "file_path_arg": bool(file_path),
+                "non_empty_lines": non_empty_lines,
+                "content_len": len(str(content)),
+            },
+        )
+
+    result = append_to_markdown(content=content, file_path=file_path)
+
+    if ctx:
+        if isinstance(result, dict) and result.get("ok"):
+            await ctx.log(
+                "info",
+                "Markdown append completed",
+                logger_name="glin.markdown",
+                extra={
+                    "path": result["path"],
+                    "bullets_added": result["bullets_added"],
+                    "heading": result["heading"],
+                    "heading_added": result["heading_added"],
+                    "heading_line_number": result["heading_line_number"],
+                    "used_env": result["used_env"],
+                    "defaulted": result["defaulted"],
+                    "line_numbers_added": result["line_numbers_added"],
+                },
+            )
+        else:
+            err = None
+            try:
+                err = None if not isinstance(result, dict) else result.get("error")
+            except Exception:
+                err = None
+            await ctx.warning(
+                "Markdown append returned an error",
+                extra={"error": (err or "unknown")[:500]},
+            )
+
+    return result
