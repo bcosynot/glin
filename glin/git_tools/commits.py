@@ -1,7 +1,10 @@
+import logging
 import subprocess
 from typing import TypedDict
 
 from ..mcp_app import mcp
+
+logger = logging.getLogger("glin.git.commits")
 
 
 class CommitInfo(TypedDict):
@@ -46,9 +49,20 @@ def _parse_commit_lines(output: str) -> list[CommitInfo]:
 
 
 def _handle_git_error(e: Exception) -> list[ErrorResponse]:
-    if isinstance(e, subprocess.CalledProcessError):
-        return [{"error": f"Git command failed: {e.stderr}"}]
-    return [{"error": f"Failed to get commits: {str(e)}"}]
+    # Log to standard logging so errors appear in GLIN_LOG_PATH output when configured
+    try:
+        if isinstance(e, subprocess.CalledProcessError):
+            stderr = e.stderr if isinstance(e.stderr, str) else str(e.stderr)
+            logger.error("Git command failed: %s", stderr)
+            return [{"error": f"Git command failed: {stderr}"}]
+        else:
+            logger.error("Failed to get commits: %s", e)
+            return [{"error": f"Failed to get commits: {str(e)}"}]
+    except Exception:
+        # Fallback without logging if logger itself fails
+        if isinstance(e, subprocess.CalledProcessError):
+            return [{"error": f"Git command failed: {e.stderr}"}]
+        return [{"error": f"Failed to get commits: {str(e)}"}]
 
 
 def _get_author_filters() -> list[str]:
@@ -183,7 +197,7 @@ async def _tool_get_recent_commits(
         if authors_count:
             redacted_cmd.append(f"--author=<{authors_count} authors>")
         await ctx.log(
-            "debug",
+            "DEBUG",
             "Planned git command",
             logger_name="glin.git.commits",
             extra={"cmd": redacted_cmd, "cwd": _getcwd(), "authors_count": authors_count},
@@ -206,7 +220,7 @@ async def _tool_get_recent_commits(
             first_date = commits_only[0]["date"]
             last_date = commits_only[-1]["date"]
             await ctx.log(
-                "info",
+                "INFO",
                 "Recent commits fetch completed",
                 logger_name="glin.git.commits",
                 extra={
@@ -226,6 +240,10 @@ async def _tool_get_recent_commits(
             if error_entries:
                 # Truncate error detail to avoid large payloads
                 msg = str(error_entries[0].get("error", ""))
+                try:
+                    logger.error("get_recent_commits failed: %s", msg)
+                except Exception:
+                    pass
                 await ctx.error(
                     "Git fetch failed",
                     extra={
@@ -281,7 +299,7 @@ async def _tool_get_commits_by_date(
         if authors_count:
             redacted_cmd.append(f"--author=<{authors_count} authors>")
         await ctx.log(
-            "debug",
+            "DEBUG",
             "Planned git command",
             logger_name="glin.git.commits",
             extra={"cmd": redacted_cmd, "cwd": _getcwd(), "authors_count": authors_count},
@@ -295,7 +313,7 @@ async def _tool_get_commits_by_date(
     if ctx:
         if commit_count:
             await ctx.log(
-                "info",
+                "INFO",
                 "Date-range fetch completed",
                 logger_name="glin.git.commits",
                 extra={
@@ -313,6 +331,15 @@ async def _tool_get_commits_by_date(
             error_entries = [r for r in result if isinstance(r, dict) and "error" in r]
             if error_entries:
                 msg = str(error_entries[0].get("error", ""))
+                try:
+                    logger.error(
+                        "get_commits_by_date failed (since=%s, until=%s): %s",
+                        since,
+                        until,
+                        msg,
+                    )
+                except Exception:
+                    pass
                 await ctx.error(
                     "Git fetch failed",
                     extra={
@@ -368,7 +395,7 @@ async def _tool_get_branch_commits(
         if authors_count:
             redacted_cmd.append(f"--author=<{authors_count} authors>")
         await ctx.log(
-            "debug",
+            "DEBUG",
             "Planned git command",
             logger_name="glin.git.commits",
             extra={"cmd": redacted_cmd, "cwd": _getcwd(), "authors_count": authors_count},
@@ -382,7 +409,7 @@ async def _tool_get_branch_commits(
     if ctx:
         if commit_count:
             await ctx.log(
-                "info",
+                "INFO",
                 "Branch commits fetch completed",
                 logger_name="glin.git.commits",
                 extra={
