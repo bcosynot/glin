@@ -62,11 +62,10 @@ Build an MCP server that automatically generates developer worklogs by capturing
 ### Phase 3: Worklog Generation (v0.4.0)
 **Goal**: Transform raw data into human-readable worklogs
 
-- [ ] Natural language summarization (using LLM)
-- [ ] Configurable summary templates
+- [x] Natural language summarization (using LLM)
 - [ ] Daily/weekly/sprint summaries
 - [ ] Achievement highlighting
-- [ ] Write to markdown file
+- [x] Write to markdown file
 
 **Timeline**: 3-4 weeks
 

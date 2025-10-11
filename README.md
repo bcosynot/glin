@@ -74,6 +74,91 @@ Glin provides MCP tools to manage email configuration:
 
 ---
 
+### 📝 MCP Prompts for Worklog Generation
+
+Glin provides server-side prompt templates that LLM clients can use to generate summaries and worklogs. These prompts are discoverable via the MCP protocol and return message sequences ready for client-side LLM processing.
+
+#### Available Prompts
+
+1. **`commit_summary`** - Summarize Git commits with types, scopes, and notable changes
+   - Required: `commits` (string) - commit data to summarize
+   - Optional: `date_range` (string) - time period for context
+   - Tags: `["summary", "git", "commits"]`
+
+2. **`diff_summary`** - Analyze code diffs and identify impacts
+   - Required: `diff` (string) - unified diff or patch
+   - Optional: `context` (string) - additional context
+   - Tags: `["summary", "analysis", "git", "diff"]`
+
+3. **`worklog_entry`** - Generate daily worklog entries
+   - Required: `date` (string) - date in ISO format (YYYY-MM-DD)
+   - Required: `inputs` (string) - commits, diffs, or notes
+   - Tags: `["worklog", "summary", "daily"]`
+
+4. **`pr_review_summary`** - Create reviewer-oriented PR summaries
+   - Required: `title` (string) - PR title
+   - Optional: `description`, `diffs`, `commits` (strings)
+   - Tags: `["review", "summary", "analysis", "pr"]`
+
+#### Using Prompts with MCP Clients
+
+List available prompts:
+```python
+from fastmcp import Client
+
+async with Client("http://localhost:8000/mcp") as client:
+    prompts = await client.list_prompts()
+    for prompt in prompts:
+        print(f"{prompt.name}: {prompt.description}")
+```
+
+Render a prompt with arguments:
+```python
+# Get commit data from git tools
+commits_result = await client.call_tool("get_commits_by_date", {
+    "since": "2025-10-09",
+    "until": "2025-10-09"
+})
+
+# Render the prompt
+messages = await client.get_prompt("commit_summary", {
+    "commits": commits_result,
+    "date_range": "2025-10-09"
+})
+
+# Send to your LLM
+summary = await your_llm.complete(messages)
+```
+
+#### Argument Serialization
+
+FastMCP automatically handles JSON serialization for complex arguments:
+- Multi-line strings work seamlessly
+- Special characters are preserved
+- Large diffs and commit logs are supported
+
+For very large inputs (>100KB), consider:
+- Chunking by date ranges or file paths
+- Filtering to relevant commits only
+- Using selective diff contexts
+
+#### Date Formatting
+
+Use ISO 8601 format (YYYY-MM-DD) for dates:
+```python
+await client.get_prompt("worklog_entry", {
+    "date": "2025-10-09",
+    "inputs": "..."
+})
+```
+
+Human-friendly ranges work in `date_range` arguments:
+- `"2025-10-01 to 2025-10-09"`
+- `"yesterday"`
+- `"last week"`
+
+---
+
 ### 🗄️ Storage and integration flags
 
 Phase 2 introduces an optional local SQLite storage used by some tools. By default, no database writes occur unless explicitly enabled.
@@ -88,6 +173,29 @@ Example (shell):
 export GLIN_DB_PATH="$HOME/.glin/db.sqlite3"
 export GLIN_DB_AUTOWRITE=1
 ```
+
+---
+
+### 🧾 Server-side logging outputs
+
+By default, Glin’s server logs go to the same place as the process stdout/stderr (your terminal, `docker logs`, or `journalctl`, depending on how you run it). To persist logs to a file, set an environment variable before starting the server:
+
+```bash
+# Write server logs to a specific file (directories will be created if missing)
+export GLIN_LOG_PATH="$HOME/.glin/logs/server.log"
+
+# Optional tuning (shown with defaults)
+export GLIN_LOG_LEVEL=INFO           # one of: DEBUG, INFO, WARNING, ERROR
+export GLIN_LOG_STDERR=1             # keep stderr handler (set to 0 to disable)
+export GLIN_LOG_ROTATE=1             # use rotation (RotatingFileHandler)
+export GLIN_LOG_MAX_BYTES=5242880    # ~5 MB per file when rotating
+export GLIN_LOG_BACKUPS=3            # keep 3 rotated backups
+```
+
+Notes
+- This controls standard server-side logging (e.g., from `fastmcp.utilities.logging.get_logger("glin.*")`).
+- MCP context logs (`ctx.debug/info/warning/error`) still go to the MCP client; use them for user-visible progress.
+- If `GLIN_LOG_PATH` is not set, logging behaves as before (console-only).
 
 ---
 

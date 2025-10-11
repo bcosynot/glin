@@ -1,4 +1,8 @@
+import logging
+import os
 import sys
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 # Optional FastMCP import with fallback stub for test environments without dependency
 try:
@@ -85,6 +89,72 @@ from . import (
 )
 
 
+def _truthy(val: str | None) -> bool:
+    return str(val).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _configure_logging_from_env() -> None:
+    """Configure server-side logging based on environment variables.
+
+    Env vars:
+      - GLIN_LOG_PATH: File path for log output. If set, a file handler is attached.
+      - GLIN_LOG_LEVEL: Logging level (DEBUG, INFO, WARNING, ERROR). Default: INFO.
+      - GLIN_LOG_STDERR: If truthy (default), keep a stderr StreamHandler; set to 0 to disable.
+      - GLIN_LOG_ROTATE: If truthy (default), use RotatingFileHandler; else plain FileHandler.
+      - GLIN_LOG_MAX_BYTES: Max size per log file in bytes when rotating. Default: 5_242_880 (~5MB).
+      - GLIN_LOG_BACKUPS: Number of rotated backups to keep. Default: 3.
+    """
+    path = os.getenv("GLIN_LOG_PATH")
+    if not path:
+        return
+
+    try:
+        p = Path(os.path.expanduser(path))
+        p.parent.mkdir(parents=True, exist_ok=True)
+
+        level_name = os.getenv("GLIN_LOG_LEVEL", "INFO").upper()
+        level = getattr(logging, level_name, logging.INFO)
+
+        root = logging.getLogger()
+        root.setLevel(level)
+
+        # Avoid duplicate handlers for the same file if run() is called multiple times in tests.
+        if any(getattr(h, "baseFilename", None) == str(p) for h in root.handlers):
+            return
+
+        rotate = _truthy(os.getenv("GLIN_LOG_ROTATE", "1"))
+        if rotate:
+            max_bytes = int(os.getenv("GLIN_LOG_MAX_BYTES", str(5_242_880)))
+            backups = int(os.getenv("GLIN_LOG_BACKUPS", "3"))
+            fh: logging.Handler = RotatingFileHandler(
+                filename=str(p), maxBytes=max_bytes, backupCount=backups, encoding="utf-8"
+            )
+        else:
+            fh = logging.FileHandler(filename=str(p), encoding="utf-8")
+
+        fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+        fh.setFormatter(fmt)
+        root.addHandler(fh)
+
+        if _truthy(os.getenv("GLIN_LOG_STDERR", "1")):
+            # Only add if no existing StreamHandler to stderr is present
+            if not any(isinstance(h, logging.StreamHandler) for h in root.handlers):
+                sh = logging.StreamHandler()
+                sh.setFormatter(fmt)
+                root.addHandler(sh)
+
+        # Align package loggers with chosen level
+        logging.getLogger("glin").setLevel(level)
+        logging.getLogger("fastmcp").setLevel(level)
+
+    except Exception as e:  # pragma: no cover - best-effort, non-fatal
+        try:
+            logging.basicConfig(level=logging.INFO)
+            logging.getLogger(__name__).warning("Failed to configure GLIN_LOG_PATH: %s", e)
+        except Exception:
+            pass
+
+
 def run(argv: list[str] | None = None) -> None:
     """
     Run the MCP server.
@@ -92,6 +162,9 @@ def run(argv: list[str] | None = None) -> None:
     If "--transport http" is present in argv, run with HTTP transport on port 8000
     to match the provided test_client. Otherwise, use the default transport.
     """
+    # Configure server-side logging if requested by environment
+    _configure_logging_from_env()
+
     args = argv if argv is not None else sys.argv
     if "--transport" in args and "http" in args:
         mcp.run(transport="http", port=8000)

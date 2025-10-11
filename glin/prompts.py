@@ -8,11 +8,13 @@ Clients can discover these with `list_prompts()` and render with
 `get_prompt(name, args)` when using a FastMCP client.
 """
 
-from __future__ import annotations
-
 from typing import TypedDict
 
+from fastmcp.utilities.logging import get_logger  # type: ignore
+
 from .mcp_app import mcp
+
+log = get_logger("glin.prompts")
 
 
 class PromptArg(TypedDict):
@@ -42,8 +44,16 @@ def _system_header(title: str) -> str:
         "Create a clear, non-redundant summary of one or more Git commits, "
         "highlighting types (feat/fix/docs/etc), scopes, and notable changes by language."
     ),
+    tags=["summary", "git", "commits"],
 )
 def commit_summary_prompt(commits: str, date_range: str | None = None):
+    if not commits or not commits.strip():
+        log.warning("commit_summary: empty commits arg")
+        raise ValueError("commits argument is required and cannot be empty")
+    log.info(
+        "commit_summary: rendering",
+        extra={"date_range": bool(date_range), "commits_len": len(commits)},
+    )
     title = "Summarize Git commits"
     if date_range:
         title += f" for {date_range}"
@@ -57,10 +67,12 @@ def commit_summary_prompt(commits: str, date_range: str | None = None):
         "- Provide a short highlights section and a detailed bullet list.\n\n"
         "<COMMITS>\n" + commits + "\n</COMMITS>"
     )
-    return [
+    msgs = [
         {"role": "system", "content": system},
         {"role": "user", "content": user},
     ]
+    log.info("commit_summary: rendered", extra={"messages": len(msgs)})
+    return msgs
 
 
 # --- Diff summary ----------------------------------------------------------
@@ -69,8 +81,16 @@ def commit_summary_prompt(commits: str, date_range: str | None = None):
 @mcp.prompt(
     name="diff_summary",
     description="Summarize a unified diff or patch into human-readable changes and risk areas.",
+    tags=["summary", "analysis", "git", "diff"],
 )
 def diff_summary_prompt(diff: str, context: str | None = None):
+    if not diff or not diff.strip():
+        log.warning("diff_summary: empty diff arg")
+        raise ValueError("diff argument is required and cannot be empty")
+    log.info(
+        "diff_summary: rendering",
+        extra={"context": bool(context), "diff_len": len(diff)},
+    )
     system = _system_header("Summarize a code diff and identify impacts")
     ctx = f"Context: {context}\n\n" if context else ""
     user = (
@@ -78,10 +98,12 @@ def diff_summary_prompt(diff: str, context: str | None = None):
         "(3) notable API/behavior changes, (4) risks and test ideas.\n\n"
         "<DIFF>\n" + diff + "\n</DIFF>"
     )
-    return [
+    msgs = [
         {"role": "system", "content": system},
         {"role": "user", "content": user},
     ]
+    log.info("diff_summary: rendered", extra={"messages": len(msgs)})
+    return msgs
 
 
 # --- Worklog entry builder -------------------------------------------------
@@ -90,20 +112,41 @@ def diff_summary_prompt(diff: str, context: str | None = None):
 @mcp.prompt(
     name="worklog_entry",
     description=(
-        "Generate a concise worklog entry for a given date from commits, diffs, or notes."
+        "Generate a concise worklog entry for a given date or period. If tool-calling is available, "
+        "fetch Git commits for that window using the 'get_commits_by_date' MCP tool and incorporate "
+        "a brief commit summary, then combine with any provided notes."
     ),
+    tags=["worklog", "summary", "daily", "git", "commits"],
 )
 def worklog_entry_prompt(date: str, inputs: str):
-    system = _system_header("Create a daily engineering worklog entry")
+    if not date or not date.strip():
+        log.warning("worklog_entry: empty date arg")
+        raise ValueError("date argument is required and cannot be empty")
+    if not inputs or not inputs.strip():
+        log.warning("worklog_entry: empty inputs arg")
+        raise ValueError("inputs argument is required and cannot be empty")
+    log.info(
+        "worklog_entry: rendering",
+        extra={"date_len": len(date), "inputs_len": len(inputs)},
+    )
+    system = _system_header("Create an engineering worklog entry from commits and notes")
     user = (
-        f"Create a worklog entry for {date}. Include sections: Highlights, Details, Next. "
-        "Keep it under 12 bullets total.\n\n"
+        f"Create a worklog entry for the period: {date}. "
+        "If you can call MCP tools, first fetch Git commits for this period using the 'get_commits_by_date' tool.\n"
+        "Guidance for deriving since/until from the period string:\n"
+        "- Single day 'YYYY-MM-DD' → since='YYYY-MM-DD', until='YYYY-MM-DD 23:59:59'.\n"
+        "- Range 'YYYY-MM-DD..YYYY-MM-DD' → since=start, until=end '23:59:59'.\n"
+        "- Relative periods (e.g., 'yesterday', 'last 2 days', '1 week ago') → since=expression, until='now'.\n"
+        "Then summarize the commits (group by type/scope, note merges/PRs, include counts if present) and combine with any notes below.\n"
+        "Output sections: Highlights, Details, Next. Keep it under 12 bullets total. Use ISO dates. If there are no commits, say so.\n\n"
         "<INPUTS>\n" + inputs + "\n</INPUTS>"
     )
-    return [
+    msgs = [
         {"role": "system", "content": system},
         {"role": "user", "content": user},
     ]
+    log.info("worklog_entry: rendered", extra={"messages": len(msgs)})
+    return msgs
 
 
 # --- PR review summary -----------------------------------------------------
@@ -112,8 +155,10 @@ def worklog_entry_prompt(date: str, inputs: str):
 @mcp.prompt(
     name="pr_review_summary",
     description=(
-        "Given PR title/description and optional diffs/commits, produce a reviewer-oriented summary."
+        "Given PR title/description and optional diffs/commits, "
+        "produce a reviewer-oriented summary."
     ),
+    tags=["review", "summary", "analysis", "pr"],
 )
 def pr_review_summary_prompt(
     title: str,
@@ -121,6 +166,18 @@ def pr_review_summary_prompt(
     diffs: str | None = None,
     commits: str | None = None,
 ):
+    if not title or not title.strip():
+        log.warning("pr_review_summary: empty title arg")
+        raise ValueError("title argument is required and cannot be empty")
+    log.info(
+        "pr_review_summary: rendering",
+        extra={
+            "title_len": len(title),
+            "has_description": bool(description),
+            "has_diffs": bool(diffs),
+            "has_commits": bool(commits),
+        },
+    )
     system = _system_header("Produce a reviewer-oriented PR summary")
     parts: list[str] = [f"Title: {title}"]
     if description:
@@ -133,7 +190,9 @@ def pr_review_summary_prompt(
         "Create a review-ready summary with: Overview, Changes, Risks, Testing ideas, "
         "Breaking changes (if any).\n\n" + "\n\n".join(parts)
     )
-    return [
+    msgs = [
         {"role": "system", "content": system},
         {"role": "user", "content": user},
     ]
+    log.info("pr_review_summary: rendered", extra={"messages": len(msgs)})
+    return msgs
