@@ -176,6 +176,29 @@ export GLIN_DB_AUTOWRITE=1
 
 ---
 
+### 🧾 Server-side logging outputs
+
+By default, Glin’s server logs go to the same place as the process stdout/stderr (your terminal, `docker logs`, or `journalctl`, depending on how you run it). To persist logs to a file, set an environment variable before starting the server:
+
+```bash
+# Write server logs to a specific file (directories will be created if missing)
+export GLIN_LOG_PATH="$HOME/.glin/logs/server.log"
+
+# Optional tuning (shown with defaults)
+export GLIN_LOG_LEVEL=INFO           # one of: DEBUG, INFO, WARNING, ERROR
+export GLIN_LOG_STDERR=1             # keep stderr handler (set to 0 to disable)
+export GLIN_LOG_ROTATE=1             # use rotation (RotatingFileHandler)
+export GLIN_LOG_MAX_BYTES=5242880    # ~5 MB per file when rotating
+export GLIN_LOG_BACKUPS=3            # keep 3 rotated backups
+```
+
+Notes
+- This controls standard server-side logging (e.g., from `fastmcp.utilities.logging.get_logger("glin.*")`).
+- MCP context logs (`ctx.debug/info/warning/error`) still go to the MCP client; use them for user-visible progress.
+- If `GLIN_LOG_PATH` is not set, logging behaves as before (console-only).
+
+---
+
 ### 🧪 Running tests
 This project uses pytest with coverage configured in pyproject.toml. You can run the test suite either directly or via the provided Makefile target.
 
