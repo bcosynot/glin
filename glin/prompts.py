@@ -94,19 +94,27 @@ def diff_summary_prompt(diff: str, context: str | None = None):
 @mcp.prompt(
     name="worklog_entry",
     description=(
-        "Generate a concise worklog entry for a given date from commits, diffs, or notes."
+        "Generate a concise worklog entry for a given date or period. If tool-calling is available, "
+        "fetch Git commits for that window using the 'get_commits_by_date' MCP tool and incorporate "
+        "a brief commit summary, then combine with any provided notes."
     ),
-    tags=["worklog", "summary", "daily"],
+    tags=["worklog", "summary", "daily", "git", "commits"],
 )
 def worklog_entry_prompt(date: str, inputs: str):
     if not date or not date.strip():
         raise ValueError("date argument is required and cannot be empty")
     if not inputs or not inputs.strip():
         raise ValueError("inputs argument is required and cannot be empty")
-    system = _system_header("Create a daily engineering worklog entry")
+    system = _system_header("Create an engineering worklog entry from commits and notes")
     user = (
-        f"Create a worklog entry for {date}. Include sections: Highlights, Details, Next. "
-        "Keep it under 12 bullets total.\n\n"
+        f"Create a worklog entry for the period: {date}. "
+        "If you can call MCP tools, first fetch Git commits for this period using the 'get_commits_by_date' tool.\n"
+        "Guidance for deriving since/until from the period string:\n"
+        "- Single day 'YYYY-MM-DD' → since='YYYY-MM-DD', until='YYYY-MM-DD 23:59:59'.\n"
+        "- Range 'YYYY-MM-DD..YYYY-MM-DD' → since=start, until=end '23:59:59'.\n"
+        "- Relative periods (e.g., 'yesterday', 'last 2 days', '1 week ago') → since=expression, until='now'.\n"
+        "Then summarize the commits (group by type/scope, note merges/PRs, include counts if present) and combine with any notes below.\n"
+        "Output sections: Highlights, Details, Next. Keep it under 12 bullets total. Use ISO dates. If there are no commits, say so.\n\n"
         "<INPUTS>\n" + inputs + "\n</INPUTS>"
     )
     return [
