@@ -197,8 +197,8 @@ async def _tool_get_recent_commits(
         if authors_count:
             redacted_cmd.append(f"--author=<{authors_count} authors>")
         await ctx.log(
-            "DEBUG",
             "Planned git command",
+            level="debug",
             logger_name="glin.git.commits",
             extra={"cmd": redacted_cmd, "cwd": _getcwd(), "authors_count": authors_count},
         )
@@ -220,8 +220,8 @@ async def _tool_get_recent_commits(
             first_date = commits_only[0]["date"]
             last_date = commits_only[-1]["date"]
             await ctx.log(
-                "INFO",
                 "Recent commits fetch completed",
+                level="info",
                 logger_name="glin.git.commits",
                 extra={
                     "tool": "get_recent_commits",
@@ -299,8 +299,8 @@ async def _tool_get_commits_by_date(
         if authors_count:
             redacted_cmd.append(f"--author=<{authors_count} authors>")
         await ctx.log(
-            "DEBUG",
             "Planned git command",
+            level="debug",
             logger_name="glin.git.commits",
             extra={"cmd": redacted_cmd, "cwd": _getcwd(), "authors_count": authors_count},
         )
@@ -313,8 +313,8 @@ async def _tool_get_commits_by_date(
     if ctx:
         if commit_count:
             await ctx.log(
-                "INFO",
                 "Date-range fetch completed",
+                level="info",
                 logger_name="glin.git.commits",
                 extra={
                     "tool": "get_commits_by_date",
@@ -395,8 +395,8 @@ async def _tool_get_branch_commits(
         if authors_count:
             redacted_cmd.append(f"--author=<{authors_count} authors>")
         await ctx.log(
-            "DEBUG",
             "Planned git command",
+            level="debug",
             logger_name="glin.git.commits",
             extra={"cmd": redacted_cmd, "cwd": _getcwd(), "authors_count": authors_count},
         )
@@ -409,8 +409,8 @@ async def _tool_get_branch_commits(
     if ctx:
         if commit_count:
             await ctx.log(
-                "INFO",
                 "Branch commits fetch completed",
+                level="info",
                 logger_name="glin.git.commits",
                 extra={
                     "tool": "get_branch_commits",

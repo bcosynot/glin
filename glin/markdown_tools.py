@@ -216,8 +216,8 @@ async def _tool_append_to_markdown(
     if ctx:
         if isinstance(result, dict) and result.get("ok"):
             await ctx.log(
-                "info",
                 "Markdown append completed",
+                level="info",
                 logger_name="glin.markdown",
                 extra={
                     "path": result["path"],
