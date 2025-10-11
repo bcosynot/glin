@@ -8,8 +8,6 @@ Clients can discover these with `list_prompts()` and render with
 `get_prompt(name, args)` when using a FastMCP client.
 """
 
-from __future__ import annotations
-
 from typing import TypedDict
 
 from .mcp_app import mcp
@@ -42,8 +40,11 @@ def _system_header(title: str) -> str:
         "Create a clear, non-redundant summary of one or more Git commits, "
         "highlighting types (feat/fix/docs/etc), scopes, and notable changes by language."
     ),
+    tags=["summary", "git", "commits"],
 )
 def commit_summary_prompt(commits: str, date_range: str | None = None):
+    if not commits or not commits.strip():
+        raise ValueError("commits argument is required and cannot be empty")
     title = "Summarize Git commits"
     if date_range:
         title += f" for {date_range}"
@@ -69,8 +70,11 @@ def commit_summary_prompt(commits: str, date_range: str | None = None):
 @mcp.prompt(
     name="diff_summary",
     description="Summarize a unified diff or patch into human-readable changes and risk areas.",
+    tags=["summary", "analysis", "git", "diff"],
 )
 def diff_summary_prompt(diff: str, context: str | None = None):
+    if not diff or not diff.strip():
+        raise ValueError("diff argument is required and cannot be empty")
     system = _system_header("Summarize a code diff and identify impacts")
     ctx = f"Context: {context}\n\n" if context else ""
     user = (
@@ -92,8 +96,13 @@ def diff_summary_prompt(diff: str, context: str | None = None):
     description=(
         "Generate a concise worklog entry for a given date from commits, diffs, or notes."
     ),
+    tags=["worklog", "summary", "daily"],
 )
 def worklog_entry_prompt(date: str, inputs: str):
+    if not date or not date.strip():
+        raise ValueError("date argument is required and cannot be empty")
+    if not inputs or not inputs.strip():
+        raise ValueError("inputs argument is required and cannot be empty")
     system = _system_header("Create a daily engineering worklog entry")
     user = (
         f"Create a worklog entry for {date}. Include sections: Highlights, Details, Next. "
@@ -112,8 +121,10 @@ def worklog_entry_prompt(date: str, inputs: str):
 @mcp.prompt(
     name="pr_review_summary",
     description=(
-        "Given PR title/description and optional diffs/commits, produce a reviewer-oriented summary."
+        "Given PR title/description and optional diffs/commits, "
+        "produce a reviewer-oriented summary."
     ),
+    tags=["review", "summary", "analysis", "pr"],
 )
 def pr_review_summary_prompt(
     title: str,
@@ -121,6 +132,8 @@ def pr_review_summary_prompt(
     diffs: str | None = None,
     commits: str | None = None,
 ):
+    if not title or not title.strip():
+        raise ValueError("title argument is required and cannot be empty")
     system = _system_header("Produce a reviewer-oriented PR summary")
     parts: list[str] = [f"Title: {title}"]
     if description:

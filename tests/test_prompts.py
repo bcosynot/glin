@@ -20,3 +20,36 @@ def test_commit_summary_renders_messages():
     assert messages[0]["role"] == "system"
     assert messages[1]["role"] == "user"
     assert "feat(core):" in messages[1]["content"]
+
+
+def test_prompts_accept_complex_json_serializable_args():
+    """Verify that prompts accept complex arguments that FastMCP will JSON-serialize."""
+    # Multi-line strings with special characters
+    complex_commits = """feat(api): add new endpoint
+
+    - Added POST /api/users
+    - Includes validation
+
+    fix(ui): correct button alignment"""
+
+    prompts = [p for p in getattr(mcp, "_prompts", []) if p.get("name") == "commit_summary"]
+    assert prompts, "commit_summary prompt not found"
+    render = prompts[0]["func"]
+    messages = render(commits=complex_commits, date_range="2025-10-09")
+    assert isinstance(messages, list)
+    assert "POST /api/users" in messages[1]["content"]
+
+
+def test_prompt_validation_errors():
+    """Verify that prompts raise helpful errors for missing/empty required arguments."""
+    import pytest
+
+    prompts = [p for p in getattr(mcp, "_prompts", []) if p.get("name") == "commit_summary"]
+    assert prompts, "commit_summary prompt not found"
+    render = prompts[0]["func"]
+
+    with pytest.raises(ValueError, match="commits argument is required"):
+        render(commits="")
+
+    with pytest.raises(ValueError, match="commits argument is required"):
+        render(commits="   ")

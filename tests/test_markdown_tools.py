@@ -38,7 +38,7 @@ def test_append_to_existing_heading_appends_below(tmp_path, monkeypatch):
     path = Path(res1["path"])  # same file used implicitly
 
     # Second append should add below existing section, not duplicate heading
-    res2 = append_to_markdown("b\n\nc")
+    append_to_markdown("b\n\nc")
 
     content = read(path)
     # There should be a single heading, followed by bullets for a, b, c
@@ -144,7 +144,7 @@ def test_handles_directory_as_file_path(tmp_path, monkeypatch):
     dir_path.mkdir()
 
     try:
-        res = append_to_markdown("content", file_path=str(dir_path))
+        append_to_markdown("content", file_path=str(dir_path))
         # Should handle this gracefully or raise appropriate error
         # The exact behavior depends on the implementation
     except (IsADirectoryError, PermissionError):
@@ -204,7 +204,7 @@ def test_inserts_heading_in_middle_of_document(tmp_path, monkeypatch):
 """
     target.write_text(existing_content, encoding="utf-8")
 
-    res = append_to_markdown("new entry")
+    append_to_markdown("new entry")
     content = read(target)
 
     # Should insert new heading at the top, after main title

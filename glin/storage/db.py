@@ -92,7 +92,7 @@ def _mig_1(conn: sqlite3.Connection) -> None:
 
         CREATE INDEX idx_messages_conversation ON messages(conversation_id);
         CREATE INDEX idx_messages_conversation_created ON messages(conversation_id, created_at);
-        
+
         -- Commits and files
         CREATE TABLE commits (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
