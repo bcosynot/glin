@@ -1,7 +1,14 @@
+import logging
 import subprocess
+from datetime import date, timedelta
+from os import getcwd as _getcwd  # added for logging
 from typing import TypedDict
 
+from fastmcp import Context  # type: ignore
+
 from ..mcp_app import mcp
+
+logger = logging.getLogger("glin.git.commits")
 
 
 class CommitInfo(TypedDict):
@@ -46,9 +53,20 @@ def _parse_commit_lines(output: str) -> list[CommitInfo]:
 
 
 def _handle_git_error(e: Exception) -> list[ErrorResponse]:
-    if isinstance(e, subprocess.CalledProcessError):
-        return [{"error": f"Git command failed: {e.stderr}"}]
-    return [{"error": f"Failed to get commits: {str(e)}"}]
+    # Log to standard logging so errors appear in GLIN_LOG_PATH output when configured
+    try:
+        if isinstance(e, subprocess.CalledProcessError):
+            stderr = e.stderr if isinstance(e.stderr, str) else str(e.stderr)
+            logger.error("Git command failed: %s", stderr)
+            return [{"error": f"Git command failed: {stderr}"}]
+        else:
+            logger.error("Failed to get commits: %s", e)
+            return [{"error": f"Failed to get commits: {str(e)}"}]
+    except Exception:
+        # Fallback without logging if logger itself fails
+        if isinstance(e, subprocess.CalledProcessError):
+            return [{"error": f"Git command failed: {e.stderr}"}]
+        return [{"error": f"Failed to get commits: {str(e)}"}]
 
 
 def _get_author_filters() -> list[str]:
@@ -106,6 +124,30 @@ def get_recent_commits(count: int = 10) -> list[CommitInfo | ErrorResponse | Inf
         return _handle_git_error(e)
 
 
+def _normalize_date_range(since: str, until: str | None) -> tuple[str, str]:
+    """Normalize date range for day-specific queries.
+
+    If ``since`` is an ISO date (YYYY-MM-DD) and ``until`` is missing or "now",
+    treat the request as "commits for that specific day" by setting:
+      - since = previous day's date (YYYY-MM-DD)
+      - until = the provided date (YYYY-MM-DD)
+
+    This aligns with the requested behavior where a specific day implies a bounded
+    range, and ``until`` must be a concrete date, not "now".
+    """
+    until_norm = (until or "now").strip() or "now"
+    try:
+        d = date.fromisoformat(since.strip())
+        # Only adjust if until is not explicitly provided (or set to "now")
+        if until_norm == "now":
+            prev = d - timedelta(days=1)
+            return prev.isoformat(), d.isoformat()
+        return since, until_norm
+    except Exception:
+        # Non-ISO inputs (e.g., "yesterday", "1 week ago") are passed through
+        return since, until_norm
+
+
 def get_commits_by_date(
     since: str, until: str = "now"
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:
@@ -113,7 +155,10 @@ def get_commits_by_date(
         author_filters = _get_author_filters()
         if not author_filters:
             return [NO_EMAIL_ERROR]
-        cmd = _build_git_log_command([f"--since={since}", f"--until={until}"], author_filters)
+        norm_since, norm_until = _normalize_date_range(since, until)
+        cmd = _build_git_log_command(
+            [f"--since={norm_since}", f"--until={norm_until}"], author_filters
+        )
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         commits = _parse_commit_lines(result.stdout)
         if commits:
@@ -151,10 +196,99 @@ def get_branch_commits(
         "for the configured tracked email addresses."
     ),
 )
-def _tool_get_recent_commits(
+async def _tool_get_recent_commits(
     count: int = 10,
+    ctx: Context | None = None,
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:  # pragma: no cover
-    return get_recent_commits(count=count)
+    # Start/context info
+    authors = []
+    try:
+        authors = _get_author_filters()
+    except Exception:
+        authors = []
+    authors_count = len(authors)
+
+    if ctx:
+        await ctx.info(
+            "Fetching recent commits",
+            extra={
+                "tool": "get_recent_commits",
+                "count": count,
+                "authors_count": authors_count,
+            },
+        )
+        # Debug: redacted command + cwd
+        base_args = [f"-{count}"]
+        redacted_cmd = ["git", "log", *base_args]
+        if authors_count:
+            redacted_cmd.append(f"--author=<{authors_count} authors>")
+        await ctx.log(
+            "Planned git command",
+            level="debug",
+            logger_name="glin.git.commits",
+            extra={"cmd": redacted_cmd, "cwd": _getcwd(), "authors_count": authors_count},
+        )
+
+    # Call pure helper
+    result = get_recent_commits(count=count)
+
+    # Summarize outcome
+    try:
+        commits_only: list[CommitInfo] = [r for r in result if isinstance(r, dict) and "hash" in r]
+    except Exception:
+        commits_only = []
+    commit_count = len(commits_only)
+
+    if ctx:
+        if commit_count:
+            first_sha = commits_only[0]["hash"]
+            last_sha = commits_only[-1]["hash"]
+            first_date = commits_only[0]["date"]
+            last_date = commits_only[-1]["date"]
+            await ctx.log(
+                "Recent commits fetch completed",
+                level="info",
+                logger_name="glin.git.commits",
+                extra={
+                    "tool": "get_recent_commits",
+                    "count": count,
+                    "commit_count": commit_count,
+                    "first_sha": first_sha,
+                    "last_sha": last_sha,
+                    "first_date": first_date,
+                    "last_date": last_date,
+                },
+            )
+        else:
+            # Detect config gap or empty results/errors
+            error_entries = [r for r in result if isinstance(r, dict) and "error" in r]
+            info_entries = [r for r in result if isinstance(r, dict) and "info" in r]
+            if error_entries:
+                # Truncate error detail to avoid large payloads
+                msg = str(error_entries[0].get("error", ""))
+                try:
+                    logger.error("get_recent_commits failed: %s", msg)
+                except Exception:
+                    pass
+                await ctx.error(
+                    "Git fetch failed",
+                    extra={
+                        "tool": "get_recent_commits",
+                        "return": msg[:500],
+                    },
+                )
+            elif authors_count == 0:
+                await ctx.warning(
+                    "No tracked emails configured; cannot query commits",
+                    extra={"tool": "get_recent_commits"},
+                )
+            else:
+                await ctx.warning(
+                    "No recent commits found",
+                    extra={"tool": "get_recent_commits", "count": count},
+                )
+
+    return result
 
 
 @mcp.tool(
@@ -166,10 +300,93 @@ def _tool_get_recent_commits(
         "tracked email addresses."
     ),
 )
-def _tool_get_commits_by_date(
-    since: str, until: str = "now"
+async def _tool_get_commits_by_date(
+    since: str, until: str = "now", ctx: Context | None = None
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:  # pragma: no cover
-    return get_commits_by_date(since=since, until=until)
+    authors = []
+    try:
+        authors = _get_author_filters()
+    except Exception:
+        authors = []
+    authors_count = len(authors)
+
+    if ctx:
+        await ctx.info(
+            "Fetching commits in date range",
+            extra={
+                "tool": "get_commits_by_date",
+                "since": since,
+                "until": until,
+                "authors_count": authors_count,
+            },
+        )
+        base_args = [f"--since={since}", f"--until={until}"]
+        redacted_cmd = ["git", "log", *base_args]
+        if authors_count:
+            redacted_cmd.append(f"--author=<{authors_count} authors>")
+        await ctx.log(
+            "Planned git command",
+            level="debug",
+            logger_name="glin.git.commits",
+            extra={"cmd": redacted_cmd, "cwd": _getcwd(), "authors_count": authors_count},
+        )
+
+    result = get_commits_by_date(since=since, until=until)
+
+    commits_only: list[CommitInfo] = [r for r in result if isinstance(r, dict) and "hash" in r]
+    commit_count = len(commits_only)
+
+    if ctx:
+        if commit_count:
+            await ctx.log(
+                "Date-range fetch completed",
+                level="info",
+                logger_name="glin.git.commits",
+                extra={
+                    "tool": "get_commits_by_date",
+                    "since": since,
+                    "until": until,
+                    "commit_count": commit_count,
+                    "first_sha": commits_only[0]["hash"],
+                    "last_sha": commits_only[-1]["hash"],
+                    "first_date": commits_only[0]["date"],
+                    "last_date": commits_only[-1]["date"],
+                },
+            )
+        else:
+            error_entries = [r for r in result if isinstance(r, dict) and "error" in r]
+            if error_entries:
+                msg = str(error_entries[0].get("error", ""))
+                try:
+                    logger.error(
+                        "get_commits_by_date failed (since=%s, until=%s): %s",
+                        since,
+                        until,
+                        msg,
+                    )
+                except Exception:
+                    pass
+                await ctx.error(
+                    "Git fetch failed",
+                    extra={
+                        "tool": "get_commits_by_date",
+                        "since": since,
+                        "until": until,
+                        "return": msg[:500],
+                    },
+                )
+            elif authors_count == 0:
+                await ctx.warning(
+                    "No tracked emails configured; cannot query commits",
+                    extra={"tool": "get_commits_by_date"},
+                )
+            else:
+                await ctx.warning(
+                    "No commits found in date range",
+                    extra={"tool": "get_commits_by_date", "since": since, "until": until},
+                )
+
+    return result
 
 
 @mcp.tool(
@@ -179,5 +396,81 @@ def _tool_get_commits_by_date(
         "Returns the same structure as get_recent_commits."
     ),
 )
-def _tool_get_branch_commits(branch: str, count: int = 10):  # pragma: no cover
-    return get_branch_commits(branch=branch, count=count)
+async def _tool_get_branch_commits(
+    branch: str, count: int = 10, ctx: Context | None = None
+):  # pragma: no cover
+    authors = []
+    try:
+        authors = _get_author_filters()
+    except Exception:
+        authors = []
+    authors_count = len(authors)
+
+    if ctx:
+        await ctx.info(
+            "Fetching commits for branch",
+            extra={
+                "tool": "get_branch_commits",
+                "branch": branch,
+                "count": count,
+                "authors_count": authors_count,
+            },
+        )
+        base_args = [branch, f"-{count}"]
+        redacted_cmd = ["git", "log", *base_args]
+        if authors_count:
+            redacted_cmd.append(f"--author=<{authors_count} authors>")
+        await ctx.log(
+            "Planned git command",
+            level="debug",
+            logger_name="glin.git.commits",
+            extra={"cmd": redacted_cmd, "cwd": _getcwd(), "authors_count": authors_count},
+        )
+
+    result = get_branch_commits(branch=branch, count=count)
+
+    commits_only: list[CommitInfo] = [r for r in result if isinstance(r, dict) and "hash" in r]
+    commit_count = len(commits_only)
+
+    if ctx:
+        if commit_count:
+            await ctx.log(
+                "Branch commits fetch completed",
+                level="info",
+                logger_name="glin.git.commits",
+                extra={
+                    "tool": "get_branch_commits",
+                    "branch": branch,
+                    "count": count,
+                    "commit_count": commit_count,
+                    "first_sha": commits_only[0]["hash"],
+                    "last_sha": commits_only[-1]["hash"],
+                    "first_date": commits_only[0]["date"],
+                    "last_date": commits_only[-1]["date"],
+                },
+            )
+        else:
+            error_entries = [r for r in result if isinstance(r, dict) and "error" in r]
+            if error_entries:
+                msg = str(error_entries[0].get("error", ""))
+                await ctx.error(
+                    "Git fetch failed",
+                    extra={
+                        "tool": "get_branch_commits",
+                        "branch": branch,
+                        "count": count,
+                        "return": msg[:500],
+                    },
+                )
+            elif authors_count == 0:
+                await ctx.warning(
+                    "No tracked emails configured; cannot query commits",
+                    extra={"tool": "get_branch_commits", "branch": branch},
+                )
+            else:
+                await ctx.warning(
+                    "No commits found on branch",
+                    extra={"tool": "get_branch_commits", "branch": branch, "count": count},
+                )
+
+    return result

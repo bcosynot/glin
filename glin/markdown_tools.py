@@ -28,20 +28,21 @@ class MarkdownErrorResponse(TypedDict):
 
 
 def append_to_markdown(
-    content: str, file_path: str | None = None
+    content: str, file_path: str | None = None, date_str: str | None = None
 ) -> MarkdownSuccessResponse | MarkdownErrorResponse:
     """
     Append lines as bullet points under a date heading in a markdown file.
 
     Behavior:
     - Each non-empty input line becomes a markdown bullet ("- ...").
-    - Ensures a heading for the current local date ("## YYYY-MM-DD"). Creates it if missing.
-    - Appends bullets under today's heading, before the next heading or at the end.
+    - Ensures a heading for the specified date ("## YYYY-MM-DD"). If no date is provided, uses the current local date. Creates it if missing.
+    - Appends bullets under the chosen date's heading, before the next heading or at the end.
     - If file_path is provided, use that path; else GLIN_MD_PATH env var; else ./WORKLOG.md.
 
     Args:
         content: The text to append. Must be non-empty (after stripping). Newlines will be normalized.
         file_path: Optional target file path. Can be absolute or relative to the repo root.
+        date_str: Optional date string in ISO format (YYYY-MM-DD). When provided, bullets are added under this date's heading instead of today's.
 
     Returns:
         A dict with operation details or an error message, including the exact content and line numbers added.
@@ -53,7 +54,7 @@ def append_to_markdown(
             }
             return error_response
 
-        from datetime import datetime
+        from datetime import date, datetime
 
         # Resolve target path: parameter > env var > default
         target = file_path or os.getenv("GLIN_MD_PATH") or "WORKLOG.md"
@@ -72,9 +73,17 @@ def append_to_markdown(
             error_response: MarkdownErrorResponse = {"error": "content contained only blank lines"}
             return error_response
 
-        # Prepare date heading
-        today = datetime.now().date().isoformat()
-        heading = f"## {today}"
+        # Prepare date heading (validate provided date_str if any)
+        if date_str is not None:
+            try:
+                # Validate format using fromisoformat; it raises ValueError for invalid strings
+                chosen_date: date = date.fromisoformat(date_str)
+            except ValueError:
+                return {"error": "date_str must be in YYYY-MM-DD format"}
+            date_for_heading = chosen_date.isoformat()
+        else:
+            date_for_heading = datetime.now().date().isoformat()
+        heading = f"## {date_for_heading}"
 
         # Read existing file (normalize to Unix newlines)
         existing = ""
@@ -188,11 +197,61 @@ def append_to_markdown(
 
 
 # Register MCP tool wrapper preserving the public name
+from fastmcp import Context  # type: ignore
+
+
 @mcp.tool(
     name="append_to_markdown",
-    description="Append content as bullet points under today's date heading in a markdown file. Each non-empty line becomes a bullet. Creates date heading (## YYYY-MM-DD) if missing. Target file can be specified, or defaults to GLIN_MD_PATH env var, or ./WORKLOG.md.",
+    description="Append content as bullet points under a specified date heading (default: today) in a markdown file. Each non-empty line becomes a bullet. Creates date heading (## YYYY-MM-DD) if missing. Target file can be specified, or defaults to GLIN_MD_PATH env var, or ./WORKLOG.md.",
 )
-def _tool_append_to_markdown(
-    content: str, file_path: str | None = None
+async def _tool_append_to_markdown(
+    content: str,
+    file_path: str | None = None,
+    date_str: str | None = None,
+    ctx: Context | None = None,
 ) -> MarkdownSuccessResponse | MarkdownErrorResponse:  # pragma: no cover
-    return append_to_markdown(content=content, file_path=file_path)
+    # Start logging
+    if ctx:
+        non_empty_lines = sum(1 for ln in str(content).splitlines() if ln.strip())
+        await ctx.info(
+            "Appending to markdown",
+            extra={
+                "tool": "append_to_markdown",
+                "file_path_arg": bool(file_path),
+                "non_empty_lines": non_empty_lines,
+                "content_len": len(str(content)),
+                "date_str": date_str or "<today>",
+            },
+        )
+
+    result = append_to_markdown(content=content, file_path=file_path, date_str=date_str)
+
+    if ctx:
+        if isinstance(result, dict) and result.get("ok"):
+            await ctx.log(
+                "Markdown append completed",
+                level="info",
+                logger_name="glin.markdown",
+                extra={
+                    "path": result["path"],
+                    "bullets_added": result["bullets_added"],
+                    "heading": result["heading"],
+                    "heading_added": result["heading_added"],
+                    "heading_line_number": result["heading_line_number"],
+                    "used_env": result["used_env"],
+                    "defaulted": result["defaulted"],
+                    "line_numbers_added": result["line_numbers_added"],
+                },
+            )
+        else:
+            err = None
+            try:
+                err = None if not isinstance(result, dict) else result.get("error")
+            except Exception:
+                err = None
+            await ctx.warning(
+                "Markdown append returned an error",
+                extra={"error": (err or "unknown")[:500]},
+            )
+
+    return result

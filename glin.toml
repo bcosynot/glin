@@ -1,3 +1,0 @@
-# Glin Configuration
-# List of email addresses to track commits from
-track_emails = ["test1@example.com", "test2@example.com"]
