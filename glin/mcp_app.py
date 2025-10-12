@@ -87,6 +87,7 @@ from . import (
     git_tools as _git_tools,  # noqa: F401
     markdown_tools as _markdown_tools,  # noqa: F401
     prompts as _prompts,  # noqa: F401
+    worklog_generator as _worklog_generator,  # noqa: F401  # register rich worklog tool
 )
 
 
