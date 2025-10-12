@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Any, TypedDict
+from fastmcp import Context  # type: ignore
 
 from .mcp_app import mcp
 
