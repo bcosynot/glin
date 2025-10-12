@@ -32,6 +32,7 @@ from .diffs import get_commit_diff
 from .enrichment import get_enriched_commits
 from .files import get_commit_files
 from .remotes import get_remote_origin
+from .sessions import detect_work_sessions, get_work_sessions
 
 __all__ = [
     # compatibility re-exports for patching
@@ -61,6 +62,9 @@ __all__ = [
     "get_enriched_commits",
     # remotes
     "get_remote_origin",
+    # sessions
+    "detect_work_sessions",
+    "get_work_sessions",
     # branches
     "get_current_branch",
     "list_branches",
