@@ -90,6 +90,9 @@ from . import (
     worklog_generator as _worklog_generator,  # noqa: F401  # register rich worklog tool
 )
 
+# Import storage tools (commit-conversation links) to register their MCP tools
+from .storage import links as _storage_links  # noqa: F401
+
 
 def _truthy(val: str | None) -> bool:
     return str(val).strip().lower() in {"1", "true", "yes", "on"}

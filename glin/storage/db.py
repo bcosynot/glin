@@ -138,8 +138,29 @@ def _mig_1(conn: sqlite3.Connection) -> None:
     )
 
 
+def _mig_2(conn: sqlite3.Connection) -> None:
+    """Migration V2: Add commit-conversation linking table and indices."""
+    conn.executescript(
+        """
+        CREATE TABLE commit_conversations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            commit_sha TEXT NOT NULL,
+            conversation_id INTEGER NOT NULL,
+            relevance_score REAL DEFAULT 1.0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+            UNIQUE(commit_sha, conversation_id)
+        );
+
+        CREATE INDEX idx_commit_conversations_sha ON commit_conversations(commit_sha);
+        CREATE INDEX idx_commit_conversations_conv ON commit_conversations(conversation_id);
+        """
+    )
+
+
 MIGRATIONS: dict[int, MigrationFn] = {
     1: _mig_1,
+    2: _mig_2,
 }
 
 
@@ -241,7 +262,14 @@ def create_backup(db_path: str | None = None, *, backups_root: str = ".glin/back
 def get_db_status(db_path: str | None = None) -> DBStatus:
     """Return a status snapshot: path, schema version, and row counts per table."""
     path = db_path or DEFAULT_DB_PATH
-    tables = ["schema_version", "conversations", "messages", "commits", "commit_files"]
+    tables = [
+        "schema_version",
+        "conversations",
+        "messages",
+        "commits",
+        "commit_files",
+        "commit_conversations",
+    ]
     counts: list[DBTableCount] = []
     schema_version = 0
     ok = True
