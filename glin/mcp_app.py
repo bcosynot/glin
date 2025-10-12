@@ -83,6 +83,7 @@ if hasattr(mcp, "prompt") and callable(mcp.prompt):
 # These imports are intentionally placed after `mcp` is created
 # so that decorators can attach to the same instance at import time.
 from . import (
+    conversation_tools as _conversation_tools,  # noqa: F401
     git_tools as _git_tools,  # noqa: F401
     markdown_tools as _markdown_tools,  # noqa: F401
     prompts as _prompts,  # noqa: F401
