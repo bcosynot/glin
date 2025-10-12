@@ -198,13 +198,15 @@ def worklog_entry_prompt(date: str, inputs: str | None = None, remote_url: str |
     user = (
         f"Create a worklog entry for the period: {date}. "
         "If you can call MCP tools, first fetch Git commits for this period using the 'get_commits_by_date' tool.\n"
+        "Also, if available, fetch recent conversations for this date using 'get_recent_conversations' to provide context about goals and decisions.\n"
         "Guidance for deriving since/until from the period string:\n"
         "- Single day 'YYYY-MM-DD' → since='YYYY-MM-DD', until='YYYY-MM-DD 23:59:59'.\n"
         "- Range 'YYYY-MM-DD..YYYY-MM-DD' → since=start, until=end '23:59:59'.\n"
         "- Relative periods (e.g., 'yesterday', 'last 2 days', '1 week ago') → since=expression, until='now'.\n"
         f"- Link to the commit hash to its respective commit page using this commit URL prefix: {commit_url_prefix}\n"
         "Then summarize the commits (group by theme, type/scope, note merges/PRs, issue keys, include counts if present) and combine with any notes below.\n"
-        "Output sections: Highlights, Details, Next. Keep it under 12 bullets total. Use ISO dates. If there are no commits, say so.\n\n"
+        "Include a short 'Context' section if conversations are available.\n"
+        "Output sections: Highlights, Context, Details, Next. Keep it under 12 bullets total. Use ISO dates. If there are no commits, say so.\n\n"
     )
     if inputs:
         user += f"<INPUTS>\n{inputs}\n</INPUTS>"

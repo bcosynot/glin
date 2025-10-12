@@ -22,21 +22,33 @@ class DBStatus(TypedDict):
 
 
 def get_connection(db_path: str | None = None) -> sqlite3.Connection:
-    """Return a sqlite3 connection with sensible defaults.
+    """Return a sqlite3 connection with sensible defaults, ensuring migrations are applied.
 
     - Ensures parent directory exists when a filesystem path is used.
+    - Expands user home (e.g., `~`) before connecting to avoid creating a literal `~` file.
     - Sets row factory to sqlite3.Row for dict-like access.
     - Enables foreign keys.
+    - Ensures the database schema is initialized and up-to-date before use.
     """
 
     path = db_path or DEFAULT_DB_PATH
-    if path != ":memory:":
-        parent = Path(path).expanduser().resolve().parent
-        parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON;")
-    return conn
+    if path == ":memory:":
+        # In-memory database must be migrated on this very connection
+        conn = sqlite3.connect(path)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON;")
+        migrate_conn(conn)
+        return conn
+    else:
+        # Expand `~` and ensure parent directory exists before connecting
+        full_path = Path(path).expanduser()
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        # Open connection and migrate on it to avoid double opens
+        conn = sqlite3.connect(str(full_path))
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON;")
+        migrate_conn(conn)
+        return conn
 
 
 # --- Migration machinery ----------------------------------------------------
@@ -145,27 +157,48 @@ def _set_version(conn: sqlite3.Connection, version: int) -> None:
     )
 
 
+def migrate_conn(conn: sqlite3.Connection, target: int | None = None) -> int:
+    """Run pending migrations on an existing connection up to ``target`` (or latest).
+
+    Returns the new/current schema version. Idempotent and safe to call multiple times.
+    """
+
+    cur = _get_current_version(conn)
+    latest = max(MIGRATIONS) if MIGRATIONS else 0
+    goal = target if target is not None else latest
+    if goal < cur:
+        # We don't support down-migrations in this simple system.
+        return cur
+    for v in range(cur + 1, goal + 1):
+        fn = MIGRATIONS.get(v)
+        if fn is None:
+            raise RuntimeError(f"Missing migration {v}")
+        fn(conn)
+        _set_version(conn, v)
+    conn.commit()
+    return _get_current_version(conn)
+
+
 def migrate(db_path: str | None = None, target: int | None = None) -> int:
     """Run pending migrations up to target version (or latest) and return new version.
 
     This function is idempotent and safe to call multiple times.
     """
 
-    with get_connection(db_path) as conn:
-        cur = _get_current_version(conn)
-        latest = max(MIGRATIONS) if MIGRATIONS else 0
-        goal = target if target is not None else latest
-        if goal < cur:
-            # We don't support down-migrations in this simple system.
-            return cur
-        for v in range(cur + 1, goal + 1):
-            fn = MIGRATIONS.get(v)
-            if fn is None:
-                raise RuntimeError(f"Missing migration {v}")
-            fn(conn)
-            _set_version(conn, v)
-        conn.commit()
-        return _get_current_version(conn)
+    # Use a raw connection here to avoid recursion with get_connection().
+    path = db_path or DEFAULT_DB_PATH
+    if path == ":memory:":
+        conn = sqlite3.connect(path)
+    else:
+        full_path = Path(path).expanduser()
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(str(full_path))
+    try:
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON;")
+        return migrate_conn(conn, target)
+    finally:
+        conn.close()
 
 
 def init_db(db_path: str | None = None) -> int:
