@@ -35,6 +35,69 @@ def _system_header(title: str) -> str:
     )
 
 
+def _determine_commit_url_prefix(remote_url: str | None) -> str:
+    """
+    Given a Git remote URL, derive the HTTPS commit URL prefix for common hosts.
+
+    Supported providers and their commit URL patterns:
+    - GitHub:    https://<host>/<owner>/<repo>/commit/
+    - GitLab:    https://<host>/<owner>/<repo>/-/commit/
+    - Bitbucket: https://<host>/<owner>/<repo>/commits/
+
+    Returns an empty string when the URL cannot be parsed or the host is unknown.
+    """
+    if not remote_url:
+        return ""
+
+    url = remote_url.strip()
+    host: str | None = None
+    path: str | None = None
+
+    try:
+        # SSH formats
+        # - git@host:owner/repo.git
+        # - ssh://git@host/owner/repo.git
+        if url.startswith("ssh://"):
+            rest = url.split("://", 1)[1]
+            # Remove optional user@
+            if "@" in rest:
+                rest = rest.split("@", 1)[1]
+            if "/" in rest:
+                host, path = rest.split("/", 1)
+        elif "@" in url and ":" in url and url.split("@", 1)[0].isidentifier():
+            # Likely git@host:owner/repo.git (simple heuristic)
+            user_host, path = url.split(":", 1)
+            host = user_host.split("@", 1)[1]
+        # HTTPS/HTTP format: https://host/owner/repo(.git)
+        elif url.startswith("http://") or url.startswith("https://"):
+            rest = url.split("://", 1)[1]
+            if "/" in rest:
+                host, path = rest.split("/", 1)
+        else:
+            return ""
+
+        if not host or not path:
+            return ""
+
+        # Normalize path: drop leading slashes and trailing .git
+        path = path.lstrip("/")
+        if path.endswith(".git"):
+            path = path[:-4]
+
+        # In practice, we expect owner/repo; if more segments exist, keep them as-is.
+        base = f"https://{host}/{path}"
+        host_l = host.lower()
+        if host_l == "github.com" or "github." in host_l:
+            return base + "/commit/"
+        if host_l == "gitlab.com" or "gitlab." in host_l:
+            return base + "/-/commit/"
+        if host_l == "bitbucket.org" or "bitbucket." in host_l:
+            return base + "/commits/"
+        return ""
+    except Exception:  # pragma: no cover - be defensive in prompts layer
+        return ""
+
+
 # --- Commit summary --------------------------------------------------------
 
 
@@ -114,11 +177,12 @@ def diff_summary_prompt(diff: str, context: str | None = None):
     description=(
         "Generate a concise worklog entry for a given date or period. If tool-calling is available, "
         "fetch Git commits for that window using the 'get_commits_by_date' MCP tool and incorporate "
-        "a brief commit summary, then combine with any provided notes."
+        "a brief commit summary, then combine with any provided notes. "
+        "This prompt accepts an optional 'remote_url' parameter; you can retrieve it via the 'get_remote_origin' MCP tool."
     ),
     tags=["worklog", "summary", "daily", "git", "commits"],
 )
-def worklog_entry_prompt(date: str, inputs: str):
+def worklog_entry_prompt(date: str, inputs: str | None = None, remote_url: str | None = None):
     if not date or not date.strip():
         log.warning("worklog_entry: empty date arg")
         raise ValueError("date argument is required and cannot be empty")
@@ -130,6 +194,7 @@ def worklog_entry_prompt(date: str, inputs: str):
         extra={"date_len": len(date), "inputs_len": len(inputs)},
     )
     system = _system_header("Create an engineering worklog entry from commits and notes")
+    commit_url_prefix = _determine_commit_url_prefix(remote_url)
     user = (
         f"Create a worklog entry for the period: {date}. "
         "If you can call MCP tools, first fetch Git commits for this period using the 'get_commits_by_date' tool.\n"
@@ -137,10 +202,12 @@ def worklog_entry_prompt(date: str, inputs: str):
         "- Single day 'YYYY-MM-DD' → since='YYYY-MM-DD', until='YYYY-MM-DD 23:59:59'.\n"
         "- Range 'YYYY-MM-DD..YYYY-MM-DD' → since=start, until=end '23:59:59'.\n"
         "- Relative periods (e.g., 'yesterday', 'last 2 days', '1 week ago') → since=expression, until='now'.\n"
-        "Then summarize the commits (group by type/scope, note merges/PRs, include counts if present) and combine with any notes below.\n"
+        f"- Link to the commit hash to its respective commit page using this commit URL prefix: {commit_url_prefix}\n"
+        "Then summarize the commits (group by theme, type/scope, note merges/PRs, issue keys, include counts if present) and combine with any notes below.\n"
         "Output sections: Highlights, Details, Next. Keep it under 12 bullets total. Use ISO dates. If there are no commits, say so.\n\n"
-        "<INPUTS>\n" + inputs + "\n</INPUTS>"
     )
+    if inputs:
+        user += f"<INPUTS>\n{inputs}\n</INPUTS>"
     msgs = [
         {"role": "system", "content": system},
         {"role": "user", "content": user},

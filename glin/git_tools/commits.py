@@ -1,6 +1,10 @@
 import logging
 import subprocess
+from datetime import date, timedelta
+from os import getcwd as _getcwd  # added for logging
 from typing import TypedDict
+
+from fastmcp import Context  # type: ignore
 
 from ..mcp_app import mcp
 
@@ -120,6 +124,30 @@ def get_recent_commits(count: int = 10) -> list[CommitInfo | ErrorResponse | Inf
         return _handle_git_error(e)
 
 
+def _normalize_date_range(since: str, until: str | None) -> tuple[str, str]:
+    """Normalize date range for day-specific queries.
+
+    If ``since`` is an ISO date (YYYY-MM-DD) and ``until`` is missing or "now",
+    treat the request as "commits for that specific day" by setting:
+      - since = previous day's date (YYYY-MM-DD)
+      - until = the provided date (YYYY-MM-DD)
+
+    This aligns with the requested behavior where a specific day implies a bounded
+    range, and ``until`` must be a concrete date, not "now".
+    """
+    until_norm = (until or "now").strip() or "now"
+    try:
+        d = date.fromisoformat(since.strip())
+        # Only adjust if until is not explicitly provided (or set to "now")
+        if until_norm == "now":
+            prev = d - timedelta(days=1)
+            return prev.isoformat(), d.isoformat()
+        return since, until_norm
+    except Exception:
+        # Non-ISO inputs (e.g., "yesterday", "1 week ago") are passed through
+        return since, until_norm
+
+
 def get_commits_by_date(
     since: str, until: str = "now"
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:
@@ -127,7 +155,10 @@ def get_commits_by_date(
         author_filters = _get_author_filters()
         if not author_filters:
             return [NO_EMAIL_ERROR]
-        cmd = _build_git_log_command([f"--since={since}", f"--until={until}"], author_filters)
+        norm_since, norm_until = _normalize_date_range(since, until)
+        cmd = _build_git_log_command(
+            [f"--since={norm_since}", f"--until={norm_until}"], author_filters
+        )
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         commits = _parse_commit_lines(result.stdout)
         if commits:
@@ -157,11 +188,6 @@ def get_branch_commits(
 
 
 # MCP tool registrations
-from os import getcwd as _getcwd  # added for logging
-
-from fastmcp import Context  # type: ignore
-
-
 @mcp.tool(
     name="get_recent_commits",
     description=(

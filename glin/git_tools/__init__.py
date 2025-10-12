@@ -28,6 +28,7 @@ from .config_tools import (
 )
 from .diffs import get_commit_diff
 from .files import get_commit_files
+from .remotes import get_remote_origin
 
 __all__ = [
     # compatibility re-exports for patching
@@ -53,6 +54,8 @@ __all__ = [
     # diffs/files
     "get_commit_diff",
     "get_commit_files",
+    # remotes
+    "get_remote_origin",
     # branches
     "get_current_branch",
     "list_branches",

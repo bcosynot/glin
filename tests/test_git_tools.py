@@ -962,3 +962,62 @@ def test_get_commit_files_empty_commit(monkeypatch):
     assert result["total_additions"] == 0
     assert result["total_deletions"] == 0
     assert len(result["files"]) == 0
+
+
+def test_get_commits_by_date_normalizes_single_iso_date(monkeypatch):
+    """When since is an ISO date and until is default, normalize to previous day.."""
+    import subprocess
+    from unittest.mock import patch
+
+    # Expectation: since=2025-10-10, until=2025-10-11 when input is since="2025-10-11"
+    log_empty = Completed(stdout="\n")
+
+    with patch("glin.git_tools.get_tracked_emails", return_value=["me@example.com"]):
+        monkeypatch.setattr(
+            subprocess,
+            "run",
+            make_run(
+                [
+                    (
+                        [
+                            "git",
+                            "log",
+                            "--since=2025-10-10",
+                            "--until=2025-10-11",
+                        ],
+                        log_empty,
+                    ),
+                ]
+            ),
+        )
+        res = get_commits_by_date("2025-10-11")
+        assert res and res[0].get("info") == "No commits found in date range"
+
+
+def test_get_commits_by_date_no_normalize_with_explicit_until(monkeypatch):
+    """If until is provided explicitly, do not shift dates."""
+    import subprocess
+    from unittest.mock import patch
+
+    log_empty = Completed(stdout="\n")
+
+    with patch("glin.git_tools.get_tracked_emails", return_value=["me@example.com"]):
+        monkeypatch.setattr(
+            subprocess,
+            "run",
+            make_run(
+                [
+                    (
+                        [
+                            "git",
+                            "log",
+                            "--since=2025-10-11",
+                            "--until=2025-10-12",
+                        ],
+                        log_empty,
+                    ),
+                ]
+            ),
+        )
+        res = get_commits_by_date("2025-10-11", "2025-10-12")
+        assert res and res[0].get("info") == "No commits found in date range"
