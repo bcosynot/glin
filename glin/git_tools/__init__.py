@@ -27,6 +27,9 @@ from .config_tools import (
     get_tracked_email_config,
 )
 from .diffs import get_commit_diff
+
+# Import enrichment to register its MCP tools on module import
+from .enrichment import get_enriched_commits
 from .files import get_commit_files
 from .remotes import get_remote_origin
 
@@ -54,6 +57,8 @@ __all__ = [
     # diffs/files
     "get_commit_diff",
     "get_commit_files",
+    # enrichment
+    "get_enriched_commits",
     # remotes
     "get_remote_origin",
     # branches
