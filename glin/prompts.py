@@ -8,9 +8,10 @@ Clients can discover these with `list_prompts()` and render with
 `get_prompt(name, args)` when using a FastMCP client.
 """
 
-from typing import TypedDict
+from typing import Annotated, TypedDict
 
 from fastmcp.utilities.logging import get_logger  # type: ignore
+from pydantic import Field
 
 from .mcp_app import mcp
 
@@ -35,69 +36,6 @@ def _system_header(title: str) -> str:
     )
 
 
-def _determine_commit_url_prefix(remote_url: str | None) -> str:
-    """
-    Given a Git remote URL, derive the HTTPS commit URL prefix for common hosts.
-
-    Supported providers and their commit URL patterns:
-    - GitHub:    https://<host>/<owner>/<repo>/commit/
-    - GitLab:    https://<host>/<owner>/<repo>/-/commit/
-    - Bitbucket: https://<host>/<owner>/<repo>/commits/
-
-    Returns an empty string when the URL cannot be parsed or the host is unknown.
-    """
-    if not remote_url:
-        return ""
-
-    url = remote_url.strip()
-    host: str | None = None
-    path: str | None = None
-
-    try:
-        # SSH formats
-        # - git@host:owner/repo.git
-        # - ssh://git@host/owner/repo.git
-        if url.startswith("ssh://"):
-            rest = url.split("://", 1)[1]
-            # Remove optional user@
-            if "@" in rest:
-                rest = rest.split("@", 1)[1]
-            if "/" in rest:
-                host, path = rest.split("/", 1)
-        elif "@" in url and ":" in url and url.split("@", 1)[0].isidentifier():
-            # Likely git@host:owner/repo.git (simple heuristic)
-            user_host, path = url.split(":", 1)
-            host = user_host.split("@", 1)[1]
-        # HTTPS/HTTP format: https://host/owner/repo(.git)
-        elif url.startswith("http://") or url.startswith("https://"):
-            rest = url.split("://", 1)[1]
-            if "/" in rest:
-                host, path = rest.split("/", 1)
-        else:
-            return ""
-
-        if not host or not path:
-            return ""
-
-        # Normalize path: drop leading slashes and trailing .git
-        path = path.lstrip("/")
-        if path.endswith(".git"):
-            path = path[:-4]
-
-        # In practice, we expect owner/repo; if more segments exist, keep them as-is.
-        base = f"https://{host}/{path}"
-        host_l = host.lower()
-        if host_l == "github.com" or "github." in host_l:
-            return base + "/commit/"
-        if host_l == "gitlab.com" or "gitlab." in host_l:
-            return base + "/-/commit/"
-        if host_l == "bitbucket.org" or "bitbucket." in host_l:
-            return base + "/commits/"
-        return ""
-    except Exception:  # pragma: no cover - be defensive in prompts layer
-        return ""
-
-
 # --- Commit summary --------------------------------------------------------
 
 
@@ -109,7 +47,26 @@ def _determine_commit_url_prefix(remote_url: str | None) -> str:
     ),
     tags=["summary", "git", "commits"],
 )
-def commit_summary_prompt(commits: str, date_range: str | None = None):
+def commit_summary_prompt(
+    commits: Annotated[
+        str,
+        Field(
+            description=(
+                "A text block with one or more commit entries (e.g., formatted git log output) "
+                "or the 'get_commits_by_date' MCP tool. Provide raw text; do not JSON-encode."
+            )
+        ),
+    ],
+    date_range: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Optional label describing the time window for the commits (e.g., '2025-10-01..' "
+                "'2025-10-07', 'yesterday', or 'last 2 days'). Used only to improve the title."
+            )
+        ),
+    ] = None,
+) -> list[dict[str, str]]:
     if not commits or not commits.strip():
         log.warning("commit_summary: empty commits arg")
         raise ValueError("commits argument is required and cannot be empty")
@@ -146,7 +103,26 @@ def commit_summary_prompt(commits: str, date_range: str | None = None):
     description="Summarize a unified diff or patch into human-readable changes and risk areas.",
     tags=["summary", "analysis", "git", "diff"],
 )
-def diff_summary_prompt(diff: str, context: str | None = None):
+def diff_summary_prompt(
+    diff: Annotated[
+        str,
+        Field(
+            description=(
+                "Unified diff/patch text to analyze (e.g., output of 'git diff --unified' or a PR "
+                "patch)."
+            )
+        ),
+    ],
+    context: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Optional free-text context to tailor the summary (e.g., repository, ticket, goal, "
+                "release)."
+            )
+        ),
+    ] = None,
+) -> list[dict[str, str]]:
     if not diff or not diff.strip():
         log.warning("diff_summary: empty diff arg")
         raise ValueError("diff argument is required and cannot be empty")
@@ -175,14 +151,32 @@ def diff_summary_prompt(diff: str, context: str | None = None):
 @mcp.prompt(
     name="worklog_entry",
     description=(
-        "Generate a concise worklog entry for a given date or period. If tool-calling is available, "
-        "fetch Git commits for that window using the 'get_commits_by_date' MCP tool and incorporate "
-        "a brief commit summary, then combine with any provided notes. "
-        "This prompt accepts an optional 'remote_url' parameter; you can retrieve it via the 'get_remote_origin' MCP tool."
+        "Generate a worklog entry for a given date or period. If tool-calling is "
+        "available, fetch Git commits for that window using the 'get_commits_by_date' MCP "
+        "tool and incorporate a brief commit summary, then combine with any provided notes. "
+        "Correlate commits with any recorded conversations for the same period and include those correlations "
+        "in the entry (e.g., note which conversation a commit implements). "
+        "When merge commits reference GitHub pull requests (e.g., '#123' or 'Merge pull request #123'), "
+        "use the GitHub MCP 'pull_requests' toolset to fetch key PR details (title, author, state/merged, URL) "
+        "and include them in the entry."
     ),
     tags=["worklog", "summary", "daily", "git", "commits"],
 )
-def worklog_entry_prompt(date: str, inputs: str | None = None, remote_url: str | None = None):
+def worklog_entry_prompt(
+    date: Annotated[
+        str,
+        Field(
+            description=(
+                "Target day or period. Accepts 'YYYY-MM-DD', a range 'YYYY-MM-DD..YYYY-MM-DD', or "
+                "relative expressions like 'yesterday', 'last 2 days', '1 week ago'."
+            )
+        ),
+    ],
+    inputs: Annotated[
+        str,
+        Field(description="Free-text notes, bullets, or context to include in the worklog entry."),
+    ],
+) -> list[dict[str, str]]:
     if not date or not date.strip():
         log.warning("worklog_entry: empty date arg")
         raise ValueError("date argument is required and cannot be empty")
@@ -194,19 +188,32 @@ def worklog_entry_prompt(date: str, inputs: str | None = None, remote_url: str |
         extra={"date_len": len(date), "inputs_len": len(inputs)},
     )
     system = _system_header("Create an engineering worklog entry from commits and notes")
-    commit_url_prefix = _determine_commit_url_prefix(remote_url)
     user = (
         f"Create a worklog entry for the period: {date}. "
-        "If you can call MCP tools, first fetch Git commits for this period using the 'get_commits_by_date' tool.\n"
-        "Also, if available, fetch recent conversations for this date using 'get_recent_conversations' to provide context about goals and decisions.\n"
+        "If you can call MCP tools, first fetch Git commits for this period using the "
+        "'get_commits_by_date' tool.\n"
+        "Also, if available, fetch recent conversations for this date using "
+        "'get_recent_conversations' to provide context about goals and decisions.\n"
+        "Correlate commits with conversations as follows: For each commit, try to identify related conversations by matching keywords, issue keys, or PR numbers present in the commit message to conversation titles/previews. When you have high confidence, include the related conversation title next to the commit summary (e.g., 'Implements: <Conversation Title>'). Optionally record the association by calling 'link_commit_to_conversation' with a relevance score between 0.5 and 1.0.\n"
+        "Then, scan the commits for merge commits that reference pull requests (patterns like "
+        "'Merge pull request #123' or '#123' in the message). When PR numbers are found and the GitHub MCP is available, "
+        "use the GitHub Pull Requests toolset to retrieve details for those PRs (at minimum: title, number, HTML URL, author, "
+        "state — open/closed/merged — and merge date/mergedBy). Include a one-line PR summary with the merge item. If the toolset "
+        "is not available, include the PR numbers as-is.\n"
         "Guidance for deriving since/until from the period string:\n"
         "- Single day 'YYYY-MM-DD' → since='YYYY-MM-DD', until='YYYY-MM-DD 23:59:59'.\n"
         "- Range 'YYYY-MM-DD..YYYY-MM-DD' → since=start, until=end '23:59:59'.\n"
-        "- Relative periods (e.g., 'yesterday', 'last 2 days', '1 week ago') → since=expression, until='now'.\n"
-        f"- Link to the commit hash to its respective commit page using this commit URL prefix: {commit_url_prefix}\n"
-        "Then summarize the commits (group by theme, type/scope, note merges/PRs, issue keys, include counts if present) and combine with any notes below.\n"
-        "Include a short 'Context' section if conversations are available.\n"
-        "Output sections: Highlights, Context, Details, Next. Keep it under 12 bullets total. Use ISO dates. If there are no commits, say so.\n\n"
+        "- Relative periods (e.g., 'yesterday', 'last 2 days', '1 week ago') → since=expression, "
+        "until='now'.\n"
+        "- To turn commit hashes into clickable links, determine the commit URL prefix by calling the "
+        "'determine_commit_url_prefix' tool. First call 'get_remote_origin' to get the repository URL, "
+        "then call 'determine_commit_url_prefix' with it. If the tool returns an error or an empty prefix, "
+        "leave hashes as plain text without links.\n"
+        "Then summarize the commits (group by theme, type/scope, note merges/PRs, issue keys, "
+        "include counts if present) and combine with any notes below.\n"
+        "Include a short 'Context' section if conversations are available, highlighting the most relevant conversations and which commits they relate to.\n"
+        "Output sections: Highlights, Context, Details, Next. Keep it under 12 bullets total. "
+        "Use ISO dates. If there are no commits, say so.\n\n"
     )
     if inputs:
         user += f"<INPUTS>\n{inputs}\n</INPUTS>"
@@ -230,11 +237,23 @@ def worklog_entry_prompt(date: str, inputs: str | None = None, remote_url: str |
     tags=["review", "summary", "analysis", "pr"],
 )
 def pr_review_summary_prompt(
-    title: str,
-    description: str | None = None,
-    diffs: str | None = None,
-    commits: str | None = None,
-):
+    title: Annotated[
+        str,
+        Field(description="Pull request title (short, single-line title)."),
+    ],
+    description: Annotated[
+        str | None,
+        Field(description="Optional PR description/body text to provide additional context."),
+    ] = None,
+    diffs: Annotated[
+        str | None,
+        Field(description="Optional unified diff/patch text for the PR changes."),
+    ] = None,
+    commits: Annotated[
+        str | None,
+        Field(description="Optional text listing the commits associated with the PR."),
+    ] = None,
+) -> list[dict[str, str]]:
     if not title or not title.strip():
         log.warning("pr_review_summary: empty title arg")
         raise ValueError("title argument is required and cannot be empty")
