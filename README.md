@@ -91,8 +91,8 @@ Glin provides server-side prompt templates that LLM clients can use to generate 
    - Tags: `["summary", "analysis", "git", "diff"]`
 
 3. **`worklog_entry`** - Generate daily worklog entries
-   - Required: `date` (string) - date in ISO format (YYYY-MM-DD)
-   - Required: `inputs` (string) - commits, diffs, or notes
+   - Required: `date` (string) - target day or period. Accepts a single date `YYYY-MM-DD`, a range `YYYY-MM-DD..YYYY-MM-DD`, or relative expressions like `yesterday`, `last 2 days`, `last week`.
+   - Required: `inputs` (string) - free-text notes/context to include alongside commit summaries
    - Tags: `["worklog", "summary", "daily"]`
 
 4. **`pr_review_summary`** - Create reviewer-oriented PR summaries
@@ -142,9 +142,11 @@ For very large inputs (>100KB), consider:
 - Filtering to relevant commits only
 - Using selective diff contexts
 
-#### Date Formatting
+#### Date/Period Examples for `worklog_entry`
 
-Use ISO 8601 format (YYYY-MM-DD) for dates:
+The `date` argument accepts a single day, a range, or relative expressions.
+
+Single day (ISO 8601):
 ```python
 await client.get_prompt("worklog_entry", {
     "date": "2025-10-09",
@@ -152,10 +154,18 @@ await client.get_prompt("worklog_entry", {
 })
 ```
 
-Human-friendly ranges work in `date_range` arguments:
-- `"2025-10-01 to 2025-10-09"`
-- `"yesterday"`
-- `"last week"`
+Explicit range (inclusive):
+```python
+await client.get_prompt("worklog_entry", {
+    "date": "2025-10-01..2025-10-09",
+    "inputs": "..."
+})
+```
+
+Relative periods:
+- "yesterday"
+- "last 2 days"
+- "last week"
 
 ---
 

@@ -108,18 +108,62 @@ def _maybe_autowrite(commits: list[CommitInfo]) -> None:
         return
 
 
-def get_recent_commits(count: int = 10) -> list[CommitInfo | ErrorResponse | InfoResponse]:
+def _run_git_log_query(
+    base_args: list[str],
+    branch: str | None,
+    empty_msg_default: str,
+    empty_msg_branch_fmt: str | None = None,
+    *,
+    auto_write: bool = True,
+) -> list[CommitInfo | ErrorResponse | InfoResponse]:
+    """Run a git log query with optional branch and standardized handling.
+
+    Parameters
+    - base_args: arguments to pass to `git log` (excluding authors and pretty format).
+    - branch: optional branch name; when provided it is prepended to `base_args`.
+    - empty_msg_default: info message when no results and no branch-specific message applies.
+    - empty_msg_branch_fmt: optional format string used when no results and a branch was
+      specified. Should contain `{branch}` placeholder.
+    - auto_write: when True, call `_maybe_autowrite` on non-empty results.
+
+    Returns a list of `CommitInfo` or a single `ErrorResponse`/`InfoResponse` dict.
+    """
     try:
         author_filters = _get_author_filters()
         if not author_filters:
             return [NO_EMAIL_ERROR]
-        cmd = _build_git_log_command([f"-{count}"], author_filters)
+
+        effective_args = [*base_args]
+        if branch:
+            effective_args = [branch, *effective_args]
+
+        cmd = _build_git_log_command(effective_args, author_filters)
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         commits = _parse_commit_lines(result.stdout)
         if commits:
-            _maybe_autowrite(commits)
+            if auto_write:
+                _maybe_autowrite(commits)
             return commits
-        return [{"info": "No recent commits found"}]
+        if branch and empty_msg_branch_fmt:
+            return [{"info": empty_msg_branch_fmt.format(branch=branch)}]
+        return [{"info": empty_msg_default}]
+    except Exception as e:  # noqa: BLE001
+        return _handle_git_error(e)
+
+
+def get_recent_commits(
+    count: int = 10,
+    branch: str | None = None,
+) -> list[CommitInfo | ErrorResponse | InfoResponse]:
+    try:
+        base_args: list[str] = [f"-{count}"]
+        return _run_git_log_query(
+            base_args,
+            branch,
+            empty_msg_default="No recent commits found",
+            empty_msg_branch_fmt="No recent commits found on branch {branch}",
+            auto_write=True,
+        )
     except Exception as e:  # noqa: BLE001
         return _handle_git_error(e)
 
@@ -149,22 +193,20 @@ def _normalize_date_range(since: str, until: str | None) -> tuple[str, str]:
 
 
 def get_commits_by_date(
-    since: str, until: str = "now"
+    since: str,
+    until: str = "now",
+    branch: str | None = None,
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:
     try:
-        author_filters = _get_author_filters()
-        if not author_filters:
-            return [NO_EMAIL_ERROR]
         norm_since, norm_until = _normalize_date_range(since, until)
-        cmd = _build_git_log_command(
-            [f"--since={norm_since}", f"--until={norm_until}"], author_filters
+        base_args: list[str] = [f"--since={norm_since}", f"--until={norm_until}"]
+        return _run_git_log_query(
+            base_args,
+            branch,
+            empty_msg_default="No commits found in date range",
+            empty_msg_branch_fmt="No commits found in date range on branch {branch}",
+            auto_write=True,
         )
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        commits = _parse_commit_lines(result.stdout)
-        if commits:
-            _maybe_autowrite(commits)
-            return commits
-        return [{"info": "No commits found in date range"}]
     except Exception as e:  # noqa: BLE001
         return _handle_git_error(e)
 
@@ -173,16 +215,15 @@ def get_branch_commits(
     branch: str, count: int = 10
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:
     try:
-        author_filters = _get_author_filters()
-        if not author_filters:
-            return [NO_EMAIL_ERROR]
-        base_args = [branch, f"-{count}"]
-        cmd = _build_git_log_command(base_args, author_filters)
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        commits = _parse_commit_lines(result.stdout)
-        if commits:
-            return commits
-        return [{"info": f"No commits found on branch {branch}"}]
+        base_args: list[str] = [f"-{count}"]
+        # Use branch parameter to prepend in helper and to produce branch-aware empty message.
+        return _run_git_log_query(
+            base_args,
+            branch,
+            empty_msg_default=f"No commits found on branch {branch}",
+            empty_msg_branch_fmt="No commits found on branch {branch}",
+            auto_write=False,
+        )
     except Exception as e:  # noqa: BLE001
         return _handle_git_error(e)
 
@@ -198,6 +239,7 @@ def get_branch_commits(
 )
 async def _tool_get_recent_commits(
     count: int = 10,
+    branch: str | None = None,
     ctx: Context | None = None,
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:  # pragma: no cover
     # Start/context info
@@ -214,11 +256,14 @@ async def _tool_get_recent_commits(
             extra={
                 "tool": "get_recent_commits",
                 "count": count,
+                "branch": branch or "",
                 "authors_count": authors_count,
             },
         )
         # Debug: redacted command + cwd
         base_args = [f"-{count}"]
+        if branch:
+            base_args = [branch, *base_args]
         redacted_cmd = ["git", "log", *base_args]
         if authors_count:
             redacted_cmd.append(f"--author=<{authors_count} authors>")
@@ -226,11 +271,16 @@ async def _tool_get_recent_commits(
             "Planned git command",
             level="debug",
             logger_name="glin.git.commits",
-            extra={"cmd": redacted_cmd, "cwd": _getcwd(), "authors_count": authors_count},
+            extra={
+                "cmd": redacted_cmd,
+                "cwd": _getcwd(),
+                "authors_count": authors_count,
+                "branch": branch or "",
+            },
         )
 
     # Call pure helper
-    result = get_recent_commits(count=count)
+    result = get_recent_commits(count=count, branch=branch)
 
     # Summarize outcome
     try:
@@ -252,6 +302,7 @@ async def _tool_get_recent_commits(
                 extra={
                     "tool": "get_recent_commits",
                     "count": count,
+                    "branch": branch or "",
                     "commit_count": commit_count,
                     "first_sha": first_sha,
                     "last_sha": last_sha,
@@ -275,17 +326,18 @@ async def _tool_get_recent_commits(
                     extra={
                         "tool": "get_recent_commits",
                         "return": msg[:500],
+                        "branch": branch or "",
                     },
                 )
             elif authors_count == 0:
                 await ctx.warning(
                     "No tracked emails configured; cannot query commits",
-                    extra={"tool": "get_recent_commits"},
+                    extra={"tool": "get_recent_commits", "branch": branch or ""},
                 )
             else:
                 await ctx.warning(
                     "No recent commits found",
-                    extra={"tool": "get_recent_commits", "count": count},
+                    extra={"tool": "get_recent_commits", "count": count, "branch": branch or ""},
                 )
 
     return result
@@ -301,7 +353,10 @@ async def _tool_get_recent_commits(
     ),
 )
 async def _tool_get_commits_by_date(
-    since: str, until: str = "now", ctx: Context | None = None
+    since: str,
+    until: str = "now",
+    branch: str | None = None,
+    ctx: Context | None = None,
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:  # pragma: no cover
     authors = []
     try:
@@ -317,10 +372,13 @@ async def _tool_get_commits_by_date(
                 "tool": "get_commits_by_date",
                 "since": since,
                 "until": until,
+                "branch": branch or "",
                 "authors_count": authors_count,
             },
         )
         base_args = [f"--since={since}", f"--until={until}"]
+        if branch:
+            base_args = [branch, *base_args]
         redacted_cmd = ["git", "log", *base_args]
         if authors_count:
             redacted_cmd.append(f"--author=<{authors_count} authors>")
@@ -328,10 +386,15 @@ async def _tool_get_commits_by_date(
             "Planned git command",
             level="debug",
             logger_name="glin.git.commits",
-            extra={"cmd": redacted_cmd, "cwd": _getcwd(), "authors_count": authors_count},
+            extra={
+                "cmd": redacted_cmd,
+                "cwd": _getcwd(),
+                "authors_count": authors_count,
+                "branch": branch or "",
+            },
         )
 
-    result = get_commits_by_date(since=since, until=until)
+    result = get_commits_by_date(since=since, until=until, branch=branch)
 
     commits_only: list[CommitInfo] = [r for r in result if isinstance(r, dict) and "hash" in r]
     commit_count = len(commits_only)
@@ -346,6 +409,7 @@ async def _tool_get_commits_by_date(
                     "tool": "get_commits_by_date",
                     "since": since,
                     "until": until,
+                    "branch": branch or "",
                     "commit_count": commit_count,
                     "first_sha": commits_only[0]["hash"],
                     "last_sha": commits_only[-1]["hash"],
@@ -359,9 +423,10 @@ async def _tool_get_commits_by_date(
                 msg = str(error_entries[0].get("error", ""))
                 try:
                     logger.error(
-                        "get_commits_by_date failed (since=%s, until=%s): %s",
+                        "get_commits_by_date failed (since=%s, until=%s, branch=%s): %s",
                         since,
                         until,
+                        branch or "",
                         msg,
                     )
                 except Exception:
@@ -372,18 +437,24 @@ async def _tool_get_commits_by_date(
                         "tool": "get_commits_by_date",
                         "since": since,
                         "until": until,
+                        "branch": branch or "",
                         "return": msg[:500],
                     },
                 )
             elif authors_count == 0:
                 await ctx.warning(
                     "No tracked emails configured; cannot query commits",
-                    extra={"tool": "get_commits_by_date"},
+                    extra={"tool": "get_commits_by_date", "branch": branch or ""},
                 )
             else:
                 await ctx.warning(
                     "No commits found in date range",
-                    extra={"tool": "get_commits_by_date", "since": since, "until": until},
+                    extra={
+                        "tool": "get_commits_by_date",
+                        "since": since,
+                        "until": until,
+                        "branch": branch or "",
+                    },
                 )
 
     return result
