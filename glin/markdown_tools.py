@@ -28,21 +28,27 @@ class MarkdownErrorResponse(TypedDict):
 
 
 def append_to_markdown(
-    content: str, file_path: str | None = None, date_str: str | None = None
+    content: str,
+    file_path: str | None = None,
+    date_str: str | None = None,
+    *,
+    preserve_lines: bool = False,
 ) -> MarkdownSuccessResponse | MarkdownErrorResponse:
     """
-    Append lines as bullet points under a date heading in a markdown file.
+    Append content under a date heading in a markdown file.
 
     Behavior:
-    - Each non-empty input line becomes a markdown bullet ("- ...").
+    - Default (preserve_lines=False): Each non-empty input line becomes a markdown bullet ("- ...").
+    - Raw mode (preserve_lines=True): Lines are written as-is (no automatic bullet prefix). Useful for writing headings like "### Goals".
     - Ensures a heading for the specified date ("## YYYY-MM-DD"). If no date is provided, uses the current local date. Creates it if missing.
-    - Appends bullets under the chosen date's heading, before the next heading or at the end.
+    - Appends content under the chosen date's heading, before the next heading or at the end.
     - If file_path is provided, use that path; else GLIN_MD_PATH env var; else ./WORKLOG.md.
 
     Args:
         content: The text to append. Must be non-empty (after stripping). Newlines will be normalized.
         file_path: Optional target file path. Can be absolute or relative to the repo root.
-        date_str: Optional date string in ISO format (YYYY-MM-DD). When provided, bullets are added under this date's heading instead of today's.
+        date_str: Optional date string in ISO format (YYYY-MM-DD). When provided, content is added under this date's heading instead of today's.
+        preserve_lines: When True, write lines as-is; when False, prefix each non-empty line with "- ".
 
     Returns:
         A dict with operation details or an error message, including the exact content and line numbers added.
@@ -67,9 +73,15 @@ def append_to_markdown(
 
         # Normalize input newlines to Unix and split into lines
         text = str(content).replace("\r\n", "\n").replace("\r", "\n")
-        lines = [ln.strip() for ln in text.split("\n")]
-        bullets = [f"- {ln}" for ln in lines if ln != ""]
-        if not bullets:
+        lines = [
+            ln.rstrip() for ln in text.split("\n")
+        ]  # preserve leading '#' etc.; strip right only
+        # Build the block lines according to mode
+        if preserve_lines:
+            block_lines = [ln for ln in lines if ln.strip() != ""]
+        else:
+            block_lines = [f"- {ln.strip()}" for ln in lines if ln.strip() != ""]
+        if not block_lines:
             error_response: MarkdownErrorResponse = {"error": "content contained only blank lines"}
             return error_response
 
@@ -142,7 +154,7 @@ def append_to_markdown(
         after_heading_idx = heading_idx + 1
         if after_heading_idx >= len(doc_lines) or doc_lines[after_heading_idx].strip() != "":
             insert_block.append("")
-        insert_block.extend(bullets)
+        insert_block.extend(block_lines)
 
         # If there will be another heading after, ensure there is a blank line before it
         if next_heading_idx is not None:
@@ -156,7 +168,7 @@ def append_to_markdown(
         bullets_offset_in_block = 1 if (len(insert_block) > 0 and insert_block[0] == "") else 0
         bullet_line_numbers = []
         # The final line number for a given inserted line at block index k is (insert_pos + k) + 1
-        for idx in range(len(bullets)):
+        for idx in range(len(block_lines)):
             k = bullets_offset_in_block + idx
             bullet_line_numbers.append(insert_pos + k + 1)
 
@@ -181,8 +193,8 @@ def append_to_markdown(
         success_response: MarkdownSuccessResponse = {
             "ok": True,
             "path": str(path),
-            "bullets_added": len(bullets),
-            "content_added": bullets,
+            "bullets_added": len(block_lines),
+            "content_added": block_lines,
             "line_numbers_added": bullet_line_numbers,
             "heading": heading,
             "heading_added": heading_added,
@@ -202,12 +214,18 @@ from fastmcp import Context  # type: ignore
 
 @mcp.tool(
     name="append_to_markdown",
-    description="Append content as bullet points under a specified date heading (default: today) in a markdown file. Each non-empty line becomes a bullet. Creates date heading (## YYYY-MM-DD) if missing. Target file can be specified, or defaults to GLIN_MD_PATH env var, or ./WORKLOG.md.",
+    description=(
+        "Append content under a specified date heading (default: today) in a markdown file. "
+        "Default behavior: each non-empty line becomes a bullet. Set preserve_lines=True to write "
+        "lines as-is (useful for headings like '### Goals'). Creates date heading (## YYYY-MM-DD) "
+        "if missing. Target file can be specified, or defaults to GLIN_MD_PATH or ./WORKLOG.md."
+    ),
 )
 async def _tool_append_to_markdown(
     content: str,
     file_path: str | None = None,
     date_str: str | None = None,
+    preserve_lines: bool = False,
     ctx: Context | None = None,
 ) -> MarkdownSuccessResponse | MarkdownErrorResponse:  # pragma: no cover
     # Start logging
@@ -224,7 +242,12 @@ async def _tool_append_to_markdown(
             },
         )
 
-    result = append_to_markdown(content=content, file_path=file_path, date_str=date_str)
+    result = append_to_markdown(
+        content=content,
+        file_path=file_path,
+        date_str=date_str,
+        preserve_lines=preserve_lines,
+    )
 
     if ctx:
         if isinstance(result, dict) and result.get("ok"):
