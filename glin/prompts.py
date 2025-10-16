@@ -200,6 +200,7 @@ def worklog_entry_prompt(
         "use the GitHub Pull Requests toolset to retrieve details for those PRs (at minimum: title, number, HTML URL, author, "
         "state — open/closed/merged — and merge date/mergedBy). Include a one-line PR summary with the merge item. If the toolset "
         "is not available, include the PR numbers as-is.\n"
+        "Additionally, for each merge commit, attempt to determine the merged branch name (e.g., from messages like 'Merge branch <name>' or 'Merge pull request ... from <owner>/<branch>'). If a branch name is identified, call the 'get_commits_by_date' MCP tool again with the same since/until window and with branch set to that merged branch. Use the returned commits to add a brief sub-summary under the merge item highlighting what was brought in by that branch. If the branch cannot be determined, skip this step.\n"
         "Guidance for deriving since/until from the period string:\n"
         "- Single day 'YYYY-MM-DD' → since='YYYY-MM-DD', until='YYYY-MM-DD 23:59:59'.\n"
         "- Range 'YYYY-MM-DD..YYYY-MM-DD' → since=start, until=end '23:59:59'.\n"
@@ -214,6 +215,13 @@ def worklog_entry_prompt(
         "Include a short 'Context' section if conversations are available, highlighting the most relevant conversations and which commits they relate to.\n"
         "Output sections: Highlights, Context, Details, Next. Keep it under 12 bullets total. "
         "Use ISO dates. If there are no commits, say so.\n\n"
+        "IMPORTANT — Persisting the worklog:\n"
+        "- Group the final worklog content by each calendar date covered by the period.\n"
+        "- For each date D, immediately call the 'append_to_markdown' MCP tool with:\n"
+        "  • date_str = D (ISO format YYYY-MM-DD)\n"
+        "  • content = ONLY the worklog entry for date D as bullet lines (combine Highlights/Context/Details/Next into a concise bullet list)\n"
+        "  • file_path can be omitted (defaults to GLIN_MD_PATH or ./WORKLOG.md).\n"
+        "- Make exactly one tool call per date with just that date's content. Do not batch multiple dates in one call.\n"
     )
     if inputs:
         user += f"<INPUTS>\n{inputs}\n</INPUTS>"
