@@ -127,8 +127,6 @@ def test_get_branch_commits_filtered(monkeypatch):
         assert commits[0]["hash"] == "deadbeef"
 
 
-
-
 class Completed:
     def __init__(self, stdout: str = "", stderr: str = "") -> None:
         self.stdout = stdout

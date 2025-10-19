@@ -200,7 +200,7 @@ def get_db_path() -> str:
     value = os.getenv("GLIN_DB_PATH")
     if value and value.strip():
         return value.strip()
-    # Default to a stable path in user home for CI and local runs.
+    # Default to a stable path in use home for CI and local runs.
     return "~/.glin/db.sqlite3"
 
 
@@ -213,3 +213,81 @@ def get_db_autowrite() -> bool:
     if val is None:
         return False
     return val.strip().lower() in {"1", "true", "yes", "on"}
+
+
+# --- Tracked repositories configuration -------------------------------------
+
+
+def _get_common_config_paths() -> list[Path]:
+    """Return the standard locations we search for glin.toml."""
+    return [
+        Path.cwd() / "glin.toml",
+        Path.home() / ".config" / "glin" / "glin.toml",
+        Path.home() / ".glin.toml",
+    ]
+
+
+def _parse_list_from_toml(content: str, key: str) -> list[str]:
+    """Extract a simple string array from TOML for a given top-level key.
+
+    Example line handled: key = ["a", "b", "c"]
+    The parser is intentionally simple and line-oriented (consistent with _parse_emails_from_toml).
+    """
+    values: list[str] = []
+    for raw in content.split("\n"):
+        line = raw.strip()
+        if not line or not line.startswith(key):
+            continue
+        if "=" not in line:
+            continue
+        array_part = line.split("=", 1)[1].strip()
+        if not (array_part.startswith("[") and array_part.endswith("]")):
+            continue
+        items = array_part[1:-1].split(",")
+        for item in items:
+            s = item.strip().strip('"').strip("'")
+            if s:
+                values.append(s)
+    return values
+
+
+def _get_config_file_repositories() -> list[str]:
+    """Read repository configuration from glin.toml (key: track_repositories)."""
+    for p in _get_common_config_paths():
+        if p.exists():
+            try:
+                content = p.read_text()
+                repos = _parse_list_from_toml(content, "track_repositories")
+                if repos:
+                    return repos
+            except Exception:
+                continue
+    return []
+
+
+def get_tracked_repositories() -> list[str]:
+    """
+    Return the list of repositories to include when building worklogs.
+
+    Accepted formats per entry:
+    - Local filesystem path to a Git repo
+    - GitHub shorthand "owner/repo"
+    - Full Git remote URL (https or ssh)
+
+    Precedence:
+    1. GLIN_TRACK_REPOSITORIES (comma-separated)
+    2. GLIN_TRACK_REPOS (alias; comma-separated)
+    3. glin.toml key track_repositories = ["..."]
+    """
+    env_val = os.getenv("GLIN_TRACK_REPOSITORIES") or os.getenv("GLIN_TRACK_REPOS")
+    if env_val:
+        return [v.strip() for v in env_val.split(",") if v.strip()]
+    file_repos = _get_config_file_repositories()
+    if file_repos:
+        return file_repos
+    return []
+
+
+def set_tracked_repositories_env(repositories: list[str]) -> None:
+    """Set GLIN_TRACK_REPOSITORIES environment variable to a comma-separated list."""
+    os.environ["GLIN_TRACK_REPOSITORIES"] = ",".join(repositories)

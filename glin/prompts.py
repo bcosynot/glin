@@ -13,6 +13,7 @@ from typing import Annotated, TypedDict
 from fastmcp.utilities.logging import get_logger  # type: ignore
 from pydantic import Field
 
+from .config import get_tracked_repositories
 from .mcp_app import mcp
 
 log = get_logger("glin.prompts")
@@ -270,6 +271,22 @@ def worklog_entry_prompt(
         "- If Git tools are unavailable or return errors for the period, add a one-line 'Data unavailable' note and proceed with the remaining sources.\n"
         "- If heatmap data is unavailable, omit heatmap-related metrics entirely.\n"
     )
+    # Inject repository scope guidance based on user configuration
+    try:
+        repos = get_tracked_repositories()
+    except Exception:
+        repos = []
+    if repos:
+        names = ", ".join(repos)
+        user += (
+            "\nRepository scope:\n"
+            f"- Include the following repositories configured by the user: {names}.\n"
+            "- For each repository R:\n"
+            "  • If R is a local path on disk that contains a Git repository, call git MCP tools with 'workdir' set to R.\n"
+            "  • If R is a remote identifier (e.g., 'owner/repo' or a Git URL), use the GitHub MCP to fetch PRs/issues and recent activity for that repository when available.\n"
+            "  • When generating commit links per repository, first call 'get_remote_origin' with the appropriate 'workdir' (when local) for R, then 'determine_commit_url_prefix' to build links specific to R.\n"
+            "- Consider commits and PRs for each listed repository in addition to the current workspace.\n"
+        )
     if inputs:
         user += f"<INPUTS>\n{inputs}\n</INPUTS>"
     msgs = [
