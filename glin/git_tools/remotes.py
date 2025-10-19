@@ -1,7 +1,10 @@
 import subprocess
-from typing import TypedDict, TypedDict as _TypedDict  # noqa: F401
+from typing import Annotated, TypedDict, TypedDict as _TypedDict  # noqa: F401
+
+from pydantic import Field
 
 from ..mcp_app import mcp
+from .utils import resolve_repo_root, run_git
 
 
 class RemoteInfo(TypedDict, total=False):
@@ -10,7 +13,7 @@ class RemoteInfo(TypedDict, total=False):
     error: str
 
 
-def get_remote_origin() -> RemoteInfo:
+def get_remote_origin(workdir: str | None = None) -> RemoteInfo:
     """
     Return information about the remote named 'origin' for the current repository.
 
@@ -18,9 +21,20 @@ def get_remote_origin() -> RemoteInfo:
     On failure: {"error": "..."}
     """
     try:
-        res = subprocess.run(
-            ["git", "remote", "get-url", "origin"], capture_output=True, text=True, check=True
-        )
+        # Resolve repo root only when an explicit workdir is provided to preserve default behavior
+        repo_root: str | None = None
+        if workdir is not None:
+            root_res = resolve_repo_root(workdir)
+            if "error" in root_res:
+                return {"error": root_res["error"]}
+            repo_root = root_res.get("path")
+
+        if repo_root:
+            res = run_git(["remote", "get-url", "origin"], repo_root=repo_root)
+        else:
+            res = subprocess.run(
+                ["git", "remote", "get-url", "origin"], capture_output=True, text=True, check=True
+            )
         url = (res.stdout or "").strip()
         if not url:
             return {"error": "Remote 'origin' has no URL configured"}
@@ -41,8 +55,19 @@ def get_remote_origin() -> RemoteInfo:
         "Get the current repository's remote named 'origin' (if configured). Returns its URL or an error."
     ),
 )
-def _tool_get_remote_origin() -> RemoteInfo:  # pragma: no cover
-    return get_remote_origin()
+def _tool_get_remote_origin(
+    workdir: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Optional working directory for Git operations. When set, Git runs in the repository "
+                "containing this path using 'git -C <root>', ensuring commands execute in the client's "
+                "project repository rather than the server process CWD."
+            )
+        ),
+    ] = None,
+) -> RemoteInfo:  # pragma: no cover
+    return get_remote_origin(workdir=workdir)
 
 
 class CommitUrlPrefixResult(TypedDict, total=False):

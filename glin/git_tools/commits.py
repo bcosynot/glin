@@ -2,11 +2,13 @@ import logging
 import subprocess
 from datetime import date, timedelta
 from os import getcwd as _getcwd  # added for logging
-from typing import TypedDict
+from typing import Annotated, TypedDict
 
 from fastmcp import Context  # type: ignore
+from pydantic import Field
 
 from ..mcp_app import mcp
+from .utils import resolve_repo_root, run_git
 
 logger = logging.getLogger("glin.git.commits")
 
@@ -115,6 +117,7 @@ def _run_git_log_query(
     empty_msg_branch_fmt: str | None = None,
     *,
     auto_write: bool = True,
+    workdir: str | None = None,
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:
     """Run a git log query with optional branch and standardized handling.
 
@@ -138,7 +141,18 @@ def _run_git_log_query(
             effective_args = [branch, *effective_args]
 
         cmd = _build_git_log_command(effective_args, author_filters)
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        # Respect optional workdir by resolving repo root and using `git -C <root>` when provided.
+        repo_root: str | None = None
+        if workdir is not None:
+            root_res = resolve_repo_root(workdir)
+            if "error" in root_res:
+                return [{"error": root_res["error"]}]
+            repo_root = root_res.get("path")
+        if repo_root:
+            # `run_git` expects subcommand args (without leading 'git')
+            result = run_git(cmd[1:], repo_root=repo_root)
+        else:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         commits = _parse_commit_lines(result.stdout)
         if commits:
             if auto_write:
@@ -154,6 +168,7 @@ def _run_git_log_query(
 def get_recent_commits(
     count: int = 10,
     branch: str | None = None,
+    workdir: str | None = None,
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:
     try:
         base_args: list[str] = [f"-{count}"]
@@ -163,6 +178,7 @@ def get_recent_commits(
             empty_msg_default="No recent commits found",
             empty_msg_branch_fmt="No recent commits found on branch {branch}",
             auto_write=True,
+            workdir=workdir,
         )
     except Exception as e:  # noqa: BLE001
         return _handle_git_error(e)
@@ -196,6 +212,7 @@ def get_commits_by_date(
     since: str,
     until: str = "now",
     branch: str | None = None,
+    workdir: str | None = None,
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:
     try:
         norm_since, norm_until = _normalize_date_range(since, until)
@@ -206,13 +223,14 @@ def get_commits_by_date(
             empty_msg_default="No commits found in date range",
             empty_msg_branch_fmt="No commits found in date range on branch {branch}",
             auto_write=True,
+            workdir=workdir,
         )
     except Exception as e:  # noqa: BLE001
         return _handle_git_error(e)
 
 
 def get_branch_commits(
-    branch: str, count: int = 10
+    branch: str, count: int = 10, workdir: str | None = None
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:
     try:
         base_args: list[str] = [f"-{count}"]
@@ -223,6 +241,7 @@ def get_branch_commits(
             empty_msg_default=f"No commits found on branch {branch}",
             empty_msg_branch_fmt="No commits found on branch {branch}",
             auto_write=False,
+            workdir=workdir,
         )
     except Exception as e:  # noqa: BLE001
         return _handle_git_error(e)
@@ -240,6 +259,16 @@ def get_branch_commits(
 async def _tool_get_recent_commits(
     count: int = 10,
     branch: str | None = None,
+    workdir: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Optional working directory for Git operations. When set, Git runs in the repository "
+                "containing this path using 'git -C <root>', ensuring commands execute in the client's "
+                "project repository rather than the server process CWD."
+            )
+        ),
+    ] = None,
     ctx: Context | None = None,
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:  # pragma: no cover
     # Start/context info
@@ -280,7 +309,7 @@ async def _tool_get_recent_commits(
         )
 
     # Call pure helper
-    result = get_recent_commits(count=count, branch=branch)
+    result = get_recent_commits(count=count, branch=branch, workdir=workdir)
 
     # Summarize outcome
     try:
@@ -356,6 +385,16 @@ async def _tool_get_commits_by_date(
     since: str,
     until: str = "now",
     branch: str | None = None,
+    workdir: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Optional working directory for Git operations. When set, Git runs in the repository "
+                "containing this path using 'git -C <root>', ensuring commands execute in the client's "
+                "project repository rather than the server process CWD."
+            )
+        ),
+    ] = None,
     ctx: Context | None = None,
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:  # pragma: no cover
     authors = []
@@ -394,7 +433,7 @@ async def _tool_get_commits_by_date(
             },
         )
 
-    result = get_commits_by_date(since=since, until=until, branch=branch)
+    result = get_commits_by_date(since=since, until=until, branch=branch, workdir=workdir)
 
     commits_only: list[CommitInfo] = [r for r in result if isinstance(r, dict) and "hash" in r]
     commit_count = len(commits_only)
@@ -468,7 +507,19 @@ async def _tool_get_commits_by_date(
     ),
 )
 async def _tool_get_branch_commits(
-    branch: str, count: int = 10, ctx: Context | None = None
+    branch: str,
+    count: int = 10,
+    workdir: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Optional working directory for Git operations. When set, Git runs in the repository "
+                "containing this path using 'git -C <root>', ensuring commands execute in the client's "
+                "project repository rather than the server process CWD."
+            )
+        ),
+    ] = None,
+    ctx: Context | None = None,
 ):  # pragma: no cover
     authors = []
     try:
@@ -498,7 +549,7 @@ async def _tool_get_branch_commits(
             extra={"cmd": redacted_cmd, "cwd": _getcwd(), "authors_count": authors_count},
         )
 
-    result = get_branch_commits(branch=branch, count=count)
+    result = get_branch_commits(branch=branch, count=count, workdir=workdir)
 
     commits_only: list[CommitInfo] = [r for r in result if isinstance(r, dict) and "hash" in r]
     commit_count = len(commits_only)
