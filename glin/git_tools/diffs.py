@@ -1,6 +1,7 @@
 import subprocess
 
 from ..mcp_app import mcp
+from .utils import chdir
 
 
 def get_commit_diff(commit_hash: str, context_lines: int = 3) -> dict:
@@ -53,5 +54,8 @@ def get_commit_diff(commit_hash: str, context_lines: int = 3) -> dict:
         "full diff and file statistics. Optionally specify the number of context lines around changes."
     ),
 )
-def _tool_get_commit_diff(commit_hash: str, context_lines: int = 3):  # pragma: no cover
-    return get_commit_diff(commit_hash=commit_hash, context_lines=context_lines)
+from .utils import chdir
+
+def _tool_get_commit_diff(commit_hash: str, context_lines: int = 3, path: str | None = None):  # pragma: no cover
+    with chdir(path):
+        return get_commit_diff(commit_hash=commit_hash, context_lines=context_lines)

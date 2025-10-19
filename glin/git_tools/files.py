@@ -19,6 +19,7 @@ class CommitFilesResult(TypedDict):
 
 
 from ..mcp_app import mcp
+from .utils import chdir
 
 
 class FileChange(TypedDict):
@@ -115,7 +116,11 @@ def get_commit_files(commit_hash: str) -> CommitFilesResult | ErrorResponse:
         "metadata along with a list of files showing their status and line counts."
     ),
 )
+from .utils import chdir
+
 def _tool_get_commit_files(
     commit_hash: str,
+    path: str | None = None,
 ) -> CommitFilesResult | ErrorResponse:  # pragma: no cover
-    return get_commit_files(commit_hash=commit_hash)
+    with chdir(path):
+        return get_commit_files(commit_hash=commit_hash)

@@ -7,6 +7,7 @@ from typing import TypedDict
 from fastmcp import Context  # type: ignore
 
 from ..mcp_app import mcp
+from .utils import chdir
 
 logger = logging.getLogger("glin.git.commits")
 
@@ -237,9 +238,11 @@ def get_branch_commits(
         "for the configured tracked email addresses."
     ),
 )
+
 async def _tool_get_recent_commits(
     count: int = 10,
     branch: str | None = None,
+    path: str | None = None,
     ctx: Context | None = None,
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:  # pragma: no cover
     # Start/context info
@@ -280,7 +283,8 @@ async def _tool_get_recent_commits(
         )
 
     # Call pure helper
-    result = get_recent_commits(count=count, branch=branch)
+    with chdir(path):
+        result = get_recent_commits(count=count, branch=branch)
 
     # Summarize outcome
     try:
@@ -356,6 +360,7 @@ async def _tool_get_commits_by_date(
     since: str,
     until: str = "now",
     branch: str | None = None,
+    path: str | None = None,
     ctx: Context | None = None,
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:  # pragma: no cover
     authors = []
@@ -394,7 +399,8 @@ async def _tool_get_commits_by_date(
             },
         )
 
-    result = get_commits_by_date(since=since, until=until, branch=branch)
+    with chdir(path):
+            result = get_commits_by_date(since=since, until=until, branch=branch)
 
     commits_only: list[CommitInfo] = [r for r in result if isinstance(r, dict) and "hash" in r]
     commit_count = len(commits_only)
@@ -468,7 +474,7 @@ async def _tool_get_commits_by_date(
     ),
 )
 async def _tool_get_branch_commits(
-    branch: str, count: int = 10, ctx: Context | None = None
+    branch: str, count: int = 10, path: str | None = None, ctx: Context | None = None
 ):  # pragma: no cover
     authors = []
     try:

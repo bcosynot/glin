@@ -9,6 +9,7 @@ class ErrorResponse(TypedDict):
 
 
 from ..mcp_app import mcp
+from .utils import chdir
 
 
 class MergeInfo(TypedDict, total=False):
@@ -322,8 +323,11 @@ def blame_file(
         "Detect whether a commit is a merge and whether it looks like a PR merge. Returns parents, flags and PR number if available."
     ),
 )
-def _tool_detect_merge_info(commit_hash: str) -> MergeInfo | ErrorResponse:  # pragma: no cover
-    return detect_merge_info(commit_hash=commit_hash)
+from .utils import chdir
+
+def _tool_detect_merge_info(commit_hash: str, path: str | None = None) -> MergeInfo | ErrorResponse:  # pragma: no cover
+    with chdir(path):
+        return detect_merge_info(commit_hash=commit_hash)
 
 
 @mcp.tool(
@@ -334,8 +338,10 @@ def _tool_detect_merge_info(commit_hash: str) -> MergeInfo | ErrorResponse:  # p
 )
 def _tool_get_commit_statistics(
     commit_hash: str,
+    path: str | None = None,
 ) -> CommitStats | ErrorResponse:  # pragma: no cover
-    return get_commit_statistics(commit_hash=commit_hash)
+    with chdir(path):
+        return get_commit_statistics(commit_hash=commit_hash)
 
 
 @mcp.tool(
@@ -345,9 +351,10 @@ def _tool_get_commit_statistics(
     ),
 )
 def _tool_categorize_commit(
-    message_or_hash: str, is_hash: bool = False
+    message_or_hash: str, is_hash: bool = False, path: str | None = None
 ) -> Categorization | ErrorResponse:  # pragma: no cover
-    return categorize_commit(message_or_hash=message_or_hash, is_hash=is_hash)
+    with chdir(path):
+        return categorize_commit(message_or_hash=message_or_hash, is_hash=is_hash)
 
 
 @mcp.tool(
@@ -357,6 +364,8 @@ def _tool_categorize_commit(
     ),
 )
 def _tool_git_blame(
-    path: str, start_line: int = 1, end_line: int | None = None, rev: str = "HEAD"
+    path: str, start_line: int = 1, end_line: int | None = None, rev: str = "HEAD", repo_path: str | None = None
 ):  # pragma: no cover
-    return blame_file(path=path, start_line=start_line, end_line=end_line, rev=rev)
+    from .utils import chdir
+    with chdir(repo_path):
+        return blame_file(path=path, start_line=start_line, end_line=end_line, rev=rev)

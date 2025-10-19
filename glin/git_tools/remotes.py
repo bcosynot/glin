@@ -2,6 +2,7 @@ import subprocess
 from typing import TypedDict, TypedDict as _TypedDict  # noqa: F401
 
 from ..mcp_app import mcp
+from .utils import chdir
 
 
 class RemoteInfo(TypedDict, total=False):
@@ -41,8 +42,11 @@ def get_remote_origin() -> RemoteInfo:
         "Get the current repository's remote named 'origin' (if configured). Returns its URL or an error."
     ),
 )
-def _tool_get_remote_origin() -> RemoteInfo:  # pragma: no cover
-    return get_remote_origin()
+from .utils import chdir
+
+def _tool_get_remote_origin(path: str | None = None) -> RemoteInfo:  # pragma: no cover
+    with chdir(path):
+        return get_remote_origin()
 
 
 class CommitUrlPrefixResult(TypedDict, total=False):

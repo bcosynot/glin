@@ -1,6 +1,7 @@
 import subprocess
 
 from ..mcp_app import mcp
+from .utils import chdir
 
 
 def get_current_branch() -> dict:
@@ -143,8 +144,11 @@ def list_branches() -> list[BranchEntry]:
         "Get the current git branch information, including whether HEAD is detached, the upstream (if any), and ahead/behind counts versus upstream."
     ),
 )
-def _tool_get_current_branch() -> dict:  # pragma: no cover
-    return get_current_branch()
+from .utils import chdir
+
+def _tool_get_current_branch(path: str | None = None) -> dict:  # pragma: no cover
+    with chdir(path):
+        return get_current_branch()
 
 
 @mcp.tool(
@@ -153,5 +157,6 @@ def _tool_get_current_branch() -> dict:  # pragma: no cover
         "List local branches with upstream, ahead/behind counts, and last commit metadata. The current branch is marked in the response."
     ),
 )
-def _tool_list_branches() -> list[BranchEntry]:  # pragma: no cover
-    return list_branches()  # type: ignore[return-value]
+def _tool_list_branches(path: str | None = None) -> list[BranchEntry]:  # pragma: no cover
+    with chdir(path):
+        return list_branches()  # type: ignore[return-value]
