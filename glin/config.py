@@ -9,6 +9,8 @@ import os
 import subprocess
 from pathlib import Path
 
+from .git_tools.exec_util import run_git
+
 
 def get_tracked_emails() -> list[str]:
     """
@@ -107,12 +109,7 @@ def _get_git_author_pattern() -> str | None:
     Prefers user.email; falls back to user.name. Returns None if neither is set.
     """
     try:
-        email = subprocess.run(
-            ["git", "config", "--get", "user.email"],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.strip()
+        email = run_git(["git", "config", "--get", "user.email"], capture_output=True, text=True, check=True).stdout.strip()
     except subprocess.CalledProcessError:
         email = ""
 
@@ -120,12 +117,7 @@ def _get_git_author_pattern() -> str | None:
         return email
 
     try:
-        name = subprocess.run(
-            ["git", "config", "--get", "user.name"],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.strip()
+        name = run_git(["git", "config", "--get", "user.name"], capture_output=True, text=True, check=True).stdout.strip()
     except subprocess.CalledProcessError:
         name = ""
 

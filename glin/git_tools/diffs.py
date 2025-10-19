@@ -1,6 +1,7 @@
 import subprocess
 
 from ..mcp_app import mcp
+from .exec_util import run_git
 
 
 def get_commit_diff(commit_hash: str, context_lines: int = 3) -> dict:
@@ -12,7 +13,7 @@ def get_commit_diff(commit_hash: str, context_lines: int = 3) -> dict:
             "--pretty=format:%H|%an|%ae|%ai|%s",
             commit_hash,
         ]
-        metadata_result = subprocess.run(metadata_cmd, capture_output=True, text=True, check=True)
+        metadata_result = run_git(metadata_cmd, capture_output=True, text=True, check=True)
         if not metadata_result.stdout.strip():
             return {"error": f"Commit {commit_hash} not found"}
         hash, author, email, date, message = metadata_result.stdout.strip().split("|", 4)
@@ -24,10 +25,10 @@ def get_commit_diff(commit_hash: str, context_lines: int = 3) -> dict:
             "--pretty=format:",
             commit_hash,
         ]
-        diff_result = subprocess.run(diff_cmd, capture_output=True, text=True, check=True)
+        diff_result = run_git(diff_cmd, capture_output=True, text=True, check=True)
 
         stats_cmd = ["git", "show", "--stat", "--pretty=format:", commit_hash]
-        stats_result = subprocess.run(stats_cmd, capture_output=True, text=True, check=True)
+        stats_result = run_git(stats_cmd, capture_output=True, text=True, check=True)
 
         return {
             "hash": hash,

@@ -33,6 +33,7 @@ from .enrichment import get_enriched_commits
 from .files import get_commit_files
 from .remotes import get_remote_origin
 from .sessions import detect_work_sessions, get_work_sessions
+from .exec_util import run_git, resolve_caller_cwd
 
 __all__ = [
     # compatibility re-exports for patching

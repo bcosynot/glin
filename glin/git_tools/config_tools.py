@@ -4,6 +4,7 @@ from typing import TypedDict
 import glin.git_tools as git_tools
 
 from ..mcp_app import mcp
+from .exec_util import run_git
 
 
 class ConfigureSuccessResponse(TypedDict):
@@ -27,7 +28,7 @@ class EmailConfig(TypedDict):
 
 def _check_git_config(key: str) -> bool:
     try:
-        subprocess.run(["git", "config", "--get", key], capture_output=True, text=True, check=True)
+        run_git(["git", "config", "--get", key], capture_output=True, text=True, check=True)
         return True
     except subprocess.CalledProcessError:
         return False

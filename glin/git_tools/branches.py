@@ -1,24 +1,18 @@
 import subprocess
 
 from ..mcp_app import mcp
+from .exec_util import run_git
 
 
 def get_current_branch() -> dict:
     try:
-        name_res = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, check=True
-        )
+        name_res = run_git(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, check=True)
         name = name_res.stdout.strip()
         detached = name == "HEAD"
 
         upstream = None
         try:
-            up_res = subprocess.run(
-                ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
+            up_res = run_git(["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], capture_output=True, text=True, check=True)
             upstream = up_res.stdout.strip() or None
         except subprocess.CalledProcessError:
             upstream = None
@@ -27,12 +21,7 @@ def get_current_branch() -> dict:
         behind = 0
         if upstream:
             try:
-                cnt = subprocess.run(
-                    ["git", "rev-list", "--left-right", "--count", f"{name}...{upstream}"],
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
+                cnt = run_git(["git", "rev-list", "--left-right", "--count", f"{name}...{upstream}"], capture_output=True, text=True, check=True)
                 left, right = cnt.stdout.strip().split()
                 ahead = int(left)
                 behind = int(right)
@@ -76,17 +65,10 @@ class BranchEntry(TypedDict, total=False):
 def list_branches() -> list[BranchEntry]:
     try:
         fmt = "%(refname:short)|%(objectname)|%(upstream:short)|%(authorname)|%(authoremail)|%(authordate:iso8601)|%(subject)"
-        res = subprocess.run(
-            ["git", "for-each-ref", f"--format={fmt}", "refs/heads"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+        res = run_git(["git", "for-each-ref", f"--format={fmt}", "refs/heads"], capture_output=True, text=True, check=True)
         branches: list[dict] = []
 
-        cur_res = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, check=True
-        )
+        cur_res = run_git(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, check=True)
         current = cur_res.stdout.strip()
 
         for line in res.stdout.strip().split("\n"):

@@ -1,6 +1,8 @@
 import subprocess
 from typing import TypedDict
 
+from .exec_util import run_git
+
 
 class ErrorResponse(TypedDict):
     error: str
@@ -38,16 +40,16 @@ def get_commit_files(commit_hash: str) -> CommitFilesResult | ErrorResponse:
             "--pretty=format:%H|%an|%ae|%ai|%s",
             commit_hash,
         ]
-        metadata_result = subprocess.run(metadata_cmd, capture_output=True, text=True, check=True)
+        metadata_result = run_git(metadata_cmd, capture_output=True, text=True, check=True)
         if not metadata_result.stdout.strip():
             return {"error": f"Commit {commit_hash} not found"}
         hash, author, email, date, message = metadata_result.stdout.strip().split("|", 4)
 
         status_cmd = ["git", "show", "--name-status", "--pretty=format:", commit_hash]
-        status_result = subprocess.run(status_cmd, capture_output=True, text=True, check=True)
+        status_result = run_git(status_cmd, capture_output=True, text=True, check=True)
 
         numstat_cmd = ["git", "show", "--numstat", "--pretty=format:", commit_hash]
-        numstat_result = subprocess.run(numstat_cmd, capture_output=True, text=True, check=True)
+        numstat_result = run_git(numstat_cmd, capture_output=True, text=True, check=True)
 
         status_map: dict[str, tuple[str, str | None]] = {}
         for line in status_result.stdout.strip().split("\n"):

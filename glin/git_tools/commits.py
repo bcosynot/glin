@@ -4,6 +4,8 @@ from datetime import date, timedelta
 from os import getcwd as _getcwd  # added for logging
 from typing import TypedDict
 
+from .exec_util import run_git
+
 from fastmcp import Context  # type: ignore
 
 from ..mcp_app import mcp
@@ -138,7 +140,7 @@ def _run_git_log_query(
             effective_args = [branch, *effective_args]
 
         cmd = _build_git_log_command(effective_args, author_filters)
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        result = run_git(cmd, capture_output=True, text=True, check=True)
         commits = _parse_commit_lines(result.stdout)
         if commits:
             if auto_write:

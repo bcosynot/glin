@@ -3,6 +3,8 @@ import subprocess
 from collections import defaultdict
 from typing import TypedDict
 
+from .exec_util import run_git
+
 
 class ErrorResponse(TypedDict):
     error: str
@@ -103,12 +105,7 @@ _CONVENTIONAL_TYPES = {
 
 
 def _get_commit_message(commit_hash: str) -> str:
-    res = subprocess.run(
-        ["git", "show", "--no-patch", "--pretty=%s", commit_hash],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    res = run_git(["git", "show", "--no-patch", "--pretty=%s", commit_hash], capture_output=True, text=True, check=True)
     return res.stdout.strip()
 
 
@@ -121,12 +118,7 @@ def detect_merge_info(commit_hash: str) -> MergeInfo | ErrorResponse:
     - Two or more parents in `git rev-list --parents -n 1`
     """
     try:
-        parents_res = subprocess.run(
-            ["git", "rev-list", "--parents", "-n", "1", commit_hash],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+        parents_res = run_git(["git", "rev-list", "--parents", "-n", "1", commit_hash], capture_output=True, text=True, check=True)
         parts = parents_res.stdout.strip().split()
         if not parts:
             return {"error": f"Commit {commit_hash} not found"}
@@ -164,12 +156,7 @@ def get_commit_statistics(commit_hash: str) -> CommitStats | ErrorResponse:
     Uses `git show --numstat` and infers language from file extensions.
     """
     try:
-        numstat = subprocess.run(
-            ["git", "show", "--numstat", "--pretty=format:", commit_hash],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+        numstat = run_git(["git", "show", "--numstat", "--pretty=format:", commit_hash], capture_output=True, text=True, check=True)
         additions = 0
         deletions = 0
         files_changed = 0
@@ -275,7 +262,7 @@ def blame_file(
         elif start_line != 1:
             args += [f"-L{start_line},+999999"]
         args.append(path)
-        res = subprocess.run(args, capture_output=True, text=True, check=True)
+        res = run_git(args, capture_output=True, text=True, check=True)
         lines = res.stdout.splitlines()
 
         entries: list[dict] = []
