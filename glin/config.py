@@ -1,8 +1,15 @@
 """Configuration management for Glin.
 
-Phase 2 additions: read-only handling of DB-related environment flags.
+Phase 2 additions: read-only handling of DB/Markdown-related environment flags.
 - GLIN_DB_PATH: optional filesystem path to the SQLite database file.
 - GLIN_DB_AUTOWRITE: when truthy, certain integrations may persist data automatically.
+- GLIN_MD_PATH: optional filesystem path to the Markdown worklog file.
+
+Also supports a lightweight `glin.toml` file with keys:
+- track_emails = ["..."]
+- track_repositories = ["..."]
+- db_path = "..."             # new: database path
+- markdown_path = "..."       # new: markdown file path
 """
 
 import os
@@ -193,14 +200,18 @@ def get_db_path() -> str:
 
     Precedence:
     1. GLIN_DB_PATH if set (respects exact value, including ":memory:")
-    2. Sensible default: ~/.glin/db.sqlite3
+    2. glin.toml key `db_path`
+    3. Sensible default: ~/.glin/db.sqlite3
 
     This function is read-only; it does not create files or directories.
     """
     value = os.getenv("GLIN_DB_PATH")
     if value and value.strip():
         return value.strip()
-    # Default to a stable path in use home for CI and local runs.
+    file_val = _get_config_file_value("db_path")
+    if file_val and file_val.strip():
+        return file_val.strip()
+    # Default to a stable path in user home for CI and local runs.
     return "~/.glin/db.sqlite3"
 
 
@@ -213,6 +224,23 @@ def get_db_autowrite() -> bool:
     if val is None:
         return False
     return val.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def get_markdown_path() -> str:
+    """Return the Markdown worklog path.
+
+    Precedence:
+    1. GLIN_MD_PATH if set
+    2. glin.toml key `markdown_path`
+    3. Default: ./WORKLOG.md
+    """
+    value = os.getenv("GLIN_MD_PATH")
+    if value and value.strip():
+        return value.strip()
+    file_val = _get_config_file_value("markdown_path")
+    if file_val and file_val.strip():
+        return file_val.strip()
+    return "WORKLOG.md"
 
 
 # --- Tracked repositories configuration -------------------------------------
@@ -249,6 +277,44 @@ def _parse_list_from_toml(content: str, key: str) -> list[str]:
             if s:
                 values.append(s)
     return values
+
+
+def _parse_string_from_toml(content: str, key: str) -> str | None:
+    """Extract a simple string value from TOML for a given top-level key.
+
+    Example line handled: key = "value"
+    The parser is intentionally simple and line-oriented.
+    """
+    for raw in content.split("\n"):
+        line = raw.strip()
+        if not line or not line.startswith(key):
+            continue
+        if "=" not in line:
+            continue
+        value_part = line.split("=", 1)[1].strip()
+        # Allow quoted values; ignore non-quoted simple values for safety
+        if (value_part.startswith('"') and value_part.endswith('"')) or (
+            value_part.startswith("'") and value_part.endswith("'")
+        ):
+            return value_part[1:-1]
+    return None
+
+
+def _get_config_file_value(key: str) -> str | None:
+    """Read a simple string value from glin.toml for the given key.
+
+    Searches standard locations and returns the first matching value.
+    """
+    for p in _get_common_config_paths():
+        if p.exists():
+            try:
+                content = p.read_text()
+                val = _parse_string_from_toml(content, key)
+                if val:
+                    return val
+            except Exception:
+                continue
+    return None
 
 
 def _get_config_file_repositories() -> list[str]:

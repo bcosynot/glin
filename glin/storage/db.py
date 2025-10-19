@@ -3,6 +3,8 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
+from ..config import get_db_path as _get_db_path
+
 DEFAULT_DB_PATH = "~/.glin/db.sqlite3"
 
 # Types for status
@@ -31,7 +33,8 @@ def get_connection(db_path: str | None = None) -> sqlite3.Connection:
     - Ensures the database schema is initialized and up-to-date before use.
     """
 
-    path = db_path or DEFAULT_DB_PATH
+    # Resolve path: argument > env var > glin.toml > default
+    path = db_path if db_path is not None else _get_db_path()
     if path == ":memory:":
         # In-memory database must be migrated on this very connection
         conn = sqlite3.connect(path)
@@ -207,7 +210,7 @@ def migrate(db_path: str | None = None, target: int | None = None) -> int:
     """
 
     # Use a raw connection here to avoid recursion with get_connection().
-    path = db_path or DEFAULT_DB_PATH
+    path = db_path if db_path is not None else _get_db_path()
     if path == ":memory:":
         conn = sqlite3.connect(path)
     else:
@@ -242,7 +245,7 @@ def create_backup(db_path: str | None = None, *, backups_root: str = ".glin/back
     """
     import shutil
 
-    path = db_path or DEFAULT_DB_PATH
+    path = db_path if db_path is not None else _get_db_path()
     src = Path(path).expanduser()
     if src.name == ":memory:":
         raise ValueError("Cannot back up an in-memory database")
@@ -261,7 +264,7 @@ def create_backup(db_path: str | None = None, *, backups_root: str = ".glin/back
 
 def get_db_status(db_path: str | None = None) -> DBStatus:
     """Return a status snapshot: path, schema version, and row counts per table."""
-    path = db_path or DEFAULT_DB_PATH
+    path = db_path if db_path is not None else _get_db_path()
     tables = [
         "schema_version",
         "conversations",
