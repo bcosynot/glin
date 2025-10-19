@@ -1,9 +1,18 @@
 import subprocess
-from typing import TypedDict
+from typing import Annotated, TypedDict
+
+from pydantic import Field
+
+from ..mcp_app import mcp
+from .utils import resolve_repo_root, run_git
 
 
 class ErrorResponse(TypedDict):
     error: str
+
+
+def _err(msg: str) -> ErrorResponse:
+    return {"error": msg}
 
 
 class CommitFilesResult(TypedDict):
@@ -18,9 +27,6 @@ class CommitFilesResult(TypedDict):
     files_changed: int
 
 
-from ..mcp_app import mcp
-
-
 class FileChange(TypedDict):
     path: str
     status: str
@@ -29,25 +35,28 @@ class FileChange(TypedDict):
     old_path: str | None
 
 
-def get_commit_files(commit_hash: str) -> CommitFilesResult | ErrorResponse:
+def get_commit_files(
+    commit_hash: str, workdir: str | None = None
+) -> CommitFilesResult | ErrorResponse:
     try:
-        metadata_cmd = [
-            "git",
-            "show",
-            "--no-patch",
-            "--pretty=format:%H|%an|%ae|%ai|%s",
-            commit_hash,
-        ]
-        metadata_result = subprocess.run(metadata_cmd, capture_output=True, text=True, check=True)
+        repo_root: str | None = None
+        if workdir is not None:
+            root_res = resolve_repo_root(workdir)
+            if "error" in root_res:
+                return _err(root_res["error"])
+            repo_root = root_res.get("path")
+
+        metadata_args = ["show", "--no-patch", "--pretty=format:%H|%an|%ae|%ai|%s", commit_hash]
+        metadata_result = run_git(metadata_args, repo_root=repo_root)
         if not metadata_result.stdout.strip():
-            return {"error": f"Commit {commit_hash} not found"}
+            return _err(f"Commit {commit_hash} not found")
         hash, author, email, date, message = metadata_result.stdout.strip().split("|", 4)
 
-        status_cmd = ["git", "show", "--name-status", "--pretty=format:", commit_hash]
-        status_result = subprocess.run(status_cmd, capture_output=True, text=True, check=True)
+        status_args = ["show", "--name-status", "--pretty=format:", commit_hash]
+        status_result = run_git(status_args, repo_root=repo_root)
 
-        numstat_cmd = ["git", "show", "--numstat", "--pretty=format:", commit_hash]
-        numstat_result = subprocess.run(numstat_cmd, capture_output=True, text=True, check=True)
+        numstat_args = ["show", "--numstat", "--pretty=format:", commit_hash]
+        numstat_result = run_git(numstat_args, repo_root=repo_root)
 
         status_map: dict[str, tuple[str, str | None]] = {}
         for line in status_result.stdout.strip().split("\n"):
@@ -101,11 +110,11 @@ def get_commit_files(commit_hash: str) -> CommitFilesResult | ErrorResponse:
             "files_changed": len(files),
         }
     except subprocess.CalledProcessError as e:  # noqa: BLE001
-        return {"error": f"Git command failed: {e.stderr}"}
+        return _err(f"Git command failed: {e.stderr}")
     except ValueError as e:  # noqa: BLE001
-        return {"error": f"Failed to parse commit metadata: {str(e)}"}
+        return _err(f"Failed to parse commit metadata: {str(e)}")
     except Exception as e:  # noqa: BLE001
-        return {"error": f"Failed to get commit files: {str(e)}"}
+        return _err(f"Failed to get commit files: {str(e)}")
 
 
 @mcp.tool(
@@ -117,5 +126,20 @@ def get_commit_files(commit_hash: str) -> CommitFilesResult | ErrorResponse:
 )
 def _tool_get_commit_files(
     commit_hash: str,
+    workdir: Annotated[
+        str,
+        Field(
+            description=(
+                "Required working directory path. Git runs in the repository containing this path "
+                "using 'git -C <root>', ensuring commands execute in the client's project repository "
+                "rather than the server process CWD. The path must reside inside a Git repository."
+            )
+        ),
+    ],
 ) -> CommitFilesResult | ErrorResponse:  # pragma: no cover
-    return get_commit_files(commit_hash=commit_hash)
+    if not workdir:
+        return _err(
+            "Parameter 'workdir' is required. Provide a path inside the target Git repository "
+            "so the server can execute git commands with '-C <root>'."
+        )
+    return get_commit_files(commit_hash=commit_hash, workdir=workdir)

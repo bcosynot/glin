@@ -1,14 +1,20 @@
 import re
 import subprocess
 from collections import defaultdict
-from typing import TypedDict
+from typing import Annotated, TypedDict
+
+from pydantic import Field
+
+from ..mcp_app import mcp
+from .utils import resolve_repo_root, run_git
 
 
 class ErrorResponse(TypedDict):
     error: str
 
 
-from ..mcp_app import mcp
+def _err(msg: str) -> ErrorResponse:
+    return {"error": msg}
 
 
 class MergeInfo(TypedDict, total=False):
@@ -102,17 +108,18 @@ _CONVENTIONAL_TYPES = {
 }
 
 
-def _get_commit_message(commit_hash: str) -> str:
-    res = subprocess.run(
-        ["git", "show", "--no-patch", "--pretty=%s", commit_hash],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+def _get_commit_message(commit_hash: str, workdir: str | None = None) -> str:
+    repo_root: str | None = None
+    if workdir is not None:
+        root_res = resolve_repo_root(workdir)
+        if "error" in root_res:
+            raise subprocess.CalledProcessError(2, ["git", "show"], root_res["error"])  # type: ignore[arg-type]
+        repo_root = root_res.get("path")
+    res = run_git(["show", "--no-patch", "--pretty=%s", commit_hash], repo_root=repo_root)
     return res.stdout.strip()
 
 
-def detect_merge_info(commit_hash: str) -> MergeInfo | ErrorResponse:
+def detect_merge_info(commit_hash: str, workdir: str | None = None) -> MergeInfo | ErrorResponse:
     """Detect whether a commit is a merge, and whether it's a PR merge.
 
     Heuristics for PR merges:
@@ -121,17 +128,21 @@ def detect_merge_info(commit_hash: str) -> MergeInfo | ErrorResponse:
     - Two or more parents in `git rev-list --parents -n 1`
     """
     try:
-        parents_res = subprocess.run(
-            ["git", "rev-list", "--parents", "-n", "1", commit_hash],
-            capture_output=True,
-            text=True,
-            check=True,
+        repo_root: str | None = None
+        if workdir is not None:
+            root_res = resolve_repo_root(workdir)
+            if "error" in root_res:
+                return _err(root_res["error"])
+            repo_root = root_res.get("path")
+
+        parents_res = run_git(
+            ["rev-list", "--parents", "-n", "1", commit_hash], repo_root=repo_root
         )
         parts = parents_res.stdout.strip().split()
         if not parts:
-            return {"error": f"Commit {commit_hash} not found"}
+            return _err(f"Commit {commit_hash} not found")
         _hash, *parents = parts
-        message = _get_commit_message(commit_hash)
+        message = _get_commit_message(commit_hash, workdir=workdir)
 
         is_merge = len(parents) >= 2
         pr_number: int | None = None
@@ -153,22 +164,28 @@ def detect_merge_info(commit_hash: str) -> MergeInfo | ErrorResponse:
             "message": message,
         }
     except subprocess.CalledProcessError as e:  # noqa: BLE001
-        return {"error": f"Git command failed: {e.stderr}"}
+        return _err(f"Git command failed: {e.stderr}")
     except Exception as e:  # noqa: BLE001
-        return {"error": f"Failed to detect merge info: {str(e)}"}
+        return _err(f"Failed to detect merge info: {str(e)}")
 
 
-def get_commit_statistics(commit_hash: str) -> CommitStats | ErrorResponse:
+def get_commit_statistics(
+    commit_hash: str, workdir: str | None = None
+) -> CommitStats | ErrorResponse:
     """Aggregate simple statistics for a commit, including language breakdown.
 
     Uses `git show --numstat` and infers language from file extensions.
     """
     try:
-        numstat = subprocess.run(
-            ["git", "show", "--numstat", "--pretty=format:", commit_hash],
-            capture_output=True,
-            text=True,
-            check=True,
+        repo_root: str | None = None
+        if workdir is not None:
+            root_res = resolve_repo_root(workdir)
+            if "error" in root_res:
+                return _err(root_res["error"])
+            repo_root = root_res.get("path")
+
+        numstat = run_git(
+            ["show", "--numstat", "--pretty=format:", commit_hash], repo_root=repo_root
         )
         additions = 0
         deletions = 0
@@ -204,9 +221,9 @@ def get_commit_statistics(commit_hash: str) -> CommitStats | ErrorResponse:
             "by_language": dict(lang_data),
         }
     except subprocess.CalledProcessError as e:  # noqa: BLE001
-        return {"error": f"Git command failed: {e.stderr}"}
+        return _err(f"Git command failed: {e.stderr}")
     except Exception as e:  # noqa: BLE001
-        return {"error": f"Failed to compute commit statistics: {str(e)}"}
+        return _err(f"Failed to compute commit statistics: {str(e)}")
 
 
 def _infer_language(path: str) -> str:
@@ -224,14 +241,14 @@ _CONVENTIONAL_RE = re.compile(
 
 
 def categorize_commit(
-    message_or_hash: str, is_hash: bool = False
+    message_or_hash: str, is_hash: bool = False, workdir: str | None = None
 ) -> Categorization | ErrorResponse:
     """Categorize a commit message using Conventional Commits.
 
     If is_hash=True, the argument is treated as a commit hash and its subject is resolved first.
     """
     try:
-        raw = _get_commit_message(message_or_hash) if is_hash else message_or_hash
+        raw = _get_commit_message(message_or_hash, workdir=workdir) if is_hash else message_or_hash
         m = _CONVENTIONAL_RE.match(raw)
         if not m:
             return {
@@ -256,26 +273,37 @@ def categorize_commit(
             **({"hash": message_or_hash} if is_hash else {}),
         }
     except subprocess.CalledProcessError as e:  # noqa: BLE001
-        return {"error": f"Git command failed: {e.stderr}"}
+        return _err(f"Git command failed: {e.stderr}")
     except Exception as e:  # noqa: BLE001
-        return {"error": f"Failed to categorize commit: {str(e)}"}
+        return _err(f"Failed to categorize commit: {str(e)}")
 
 
 def blame_file(
-    path: str, start_line: int = 1, end_line: int | None = None, rev: str = "HEAD"
+    path: str,
+    start_line: int = 1,
+    end_line: int | None = None,
+    rev: str = "HEAD",
+    workdir: str | None = None,
 ) -> dict:
     """Run git blame on a file or a line range.
 
     Returns a structured list with commit, author, date and code for each line.
     """
     try:
-        args = ["git", "blame", rev, "--line-porcelain"]
+        repo_root: str | None = None
+        if workdir is not None:
+            root_res = resolve_repo_root(workdir)
+            if "error" in root_res:
+                return _err(root_res["error"])
+            repo_root = root_res.get("path")
+
+        args = ["blame", rev, "--line-porcelain"]
         if end_line is not None:
             args += [f"-L{start_line},{end_line}"]
         elif start_line != 1:
             args += [f"-L{start_line},+999999"]
         args.append(path)
-        res = subprocess.run(args, capture_output=True, text=True, check=True)
+        res = run_git(args, repo_root=repo_root)
         lines = res.stdout.splitlines()
 
         entries: list[dict] = []
@@ -310,9 +338,9 @@ def blame_file(
             entries.append(cur)
         return {"path": path, "rev": rev, "start": start_line, "end": end_line, "entries": entries}
     except subprocess.CalledProcessError as e:  # noqa: BLE001
-        return {"error": f"Git command failed: {e.stderr}"}
+        return _err(f"Git command failed: {e.stderr}")
     except Exception as e:  # noqa: BLE001
-        return {"error": f"Failed to run git blame: {str(e)}"}
+        return _err(f"Failed to run git blame: {str(e)}")
 
 
 # MCP tool registrations
@@ -322,8 +350,25 @@ def blame_file(
         "Detect whether a commit is a merge and whether it looks like a PR merge. Returns parents, flags and PR number if available."
     ),
 )
-def _tool_detect_merge_info(commit_hash: str) -> MergeInfo | ErrorResponse:  # pragma: no cover
-    return detect_merge_info(commit_hash=commit_hash)
+def _tool_detect_merge_info(
+    commit_hash: str,
+    workdir: Annotated[
+        str,
+        Field(
+            description=(
+                "Required working directory path. Git runs in the repository containing this path "
+                "using 'git -C <root>', ensuring commands execute in the client's project repository "
+                "rather than the server process CWD. The path must reside inside a Git repository."
+            )
+        ),
+    ],
+) -> MergeInfo | ErrorResponse:  # pragma: no cover
+    if not workdir:
+        return _err(
+            "Parameter 'workdir' is required. Provide a path inside the target Git repository "
+            "so the server can execute git commands with '-C <root>'."
+        )
+    return detect_merge_info(commit_hash=commit_hash, workdir=workdir)
 
 
 @mcp.tool(
@@ -334,8 +379,23 @@ def _tool_detect_merge_info(commit_hash: str) -> MergeInfo | ErrorResponse:  # p
 )
 def _tool_get_commit_statistics(
     commit_hash: str,
+    workdir: Annotated[
+        str,
+        Field(
+            description=(
+                "Required working directory path. Git runs in the repository containing this path "
+                "using 'git -C <root>', ensuring commands execute in the client's project repository "
+                "rather than the server process CWD. The path must reside inside a Git repository."
+            )
+        ),
+    ],
 ) -> CommitStats | ErrorResponse:  # pragma: no cover
-    return get_commit_statistics(commit_hash=commit_hash)
+    if not workdir:
+        return _err(
+            "Parameter 'workdir' is required. Provide a path inside the target Git repository "
+            "so the server can execute git commands with '-C <root>'."
+        )
+    return get_commit_statistics(commit_hash=commit_hash, workdir=workdir)
 
 
 @mcp.tool(
@@ -345,9 +405,25 @@ def _tool_get_commit_statistics(
     ),
 )
 def _tool_categorize_commit(
-    message_or_hash: str, is_hash: bool = False
+    message_or_hash: str,
+    workdir: Annotated[
+        str,
+        Field(
+            description=(
+                "Required working directory path. Git runs in the repository containing this path "
+                "using 'git -C <root>', ensuring commands execute in the client's project repository "
+                "rather than the server process CWD. The path must reside inside a Git repository."
+            )
+        ),
+    ],
+    is_hash: bool = False,
 ) -> Categorization | ErrorResponse:  # pragma: no cover
-    return categorize_commit(message_or_hash=message_or_hash, is_hash=is_hash)
+    if not workdir:
+        return _err(
+            "Parameter 'workdir' is required. Provide a path inside the target Git repository "
+            "so the server can execute git commands with '-C <root>'."
+        )
+    return categorize_commit(message_or_hash=message_or_hash, is_hash=is_hash, workdir=workdir)
 
 
 @mcp.tool(
@@ -357,6 +433,24 @@ def _tool_categorize_commit(
     ),
 )
 def _tool_git_blame(
-    path: str, start_line: int = 1, end_line: int | None = None, rev: str = "HEAD"
+    path: str,
+    workdir: Annotated[
+        str,
+        Field(
+            description=(
+                "Required working directory path. Git runs in the repository containing this path "
+                "using 'git -C <root>', ensuring commands execute in the client's project repository "
+                "rather than the server process CWD. The path must reside inside a Git repository."
+            )
+        ),
+    ],
+    start_line: int = 1,
+    end_line: int | None = None,
+    rev: str = "HEAD",
 ):  # pragma: no cover
-    return blame_file(path=path, start_line=start_line, end_line=end_line, rev=rev)
+    if not workdir:
+        return _err(
+            "Parameter 'workdir' is required. Provide a path inside the target Git repository "
+            "so the server can execute git commands with '-C <root>'."
+        )
+    return blame_file(path=path, start_line=start_line, end_line=end_line, rev=rev, workdir=workdir)

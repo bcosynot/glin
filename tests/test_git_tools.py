@@ -371,6 +371,64 @@ def test_get_commit_diff_custom_context(monkeypatch):
     assert result["message"] == "fix: bug fix"
 
 
+def test_get_commit_diff_with_workdir(monkeypatch):
+    """Diff should execute with '-C <root>' when workdir provided."""
+    import subprocess
+
+    monkeypatch.setattr("glin.git_tools.diffs.resolve_repo_root", lambda p: {"path": "/repo"})
+
+    metadata_output = Completed(
+        stdout=(
+            "abc123|Alice Author|alice@example.com|2024-01-01 12:00:00 +0000|feat: add new feature"
+        )
+    )
+    diff_output = Completed(stdout="diff content")
+    stats_output = Completed(stdout="stats content")
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        make_run(
+            [
+                (["git", "-C", "/repo", "show", "--no-patch"], metadata_output),
+                (["git", "-C", "/repo", "show", "-U3"], diff_output),
+                (["git", "-C", "/repo", "show", "--stat"], stats_output),
+            ]
+        ),
+    )
+
+    from glin.git_tools.diffs import get_commit_diff as _gcd
+
+    result = _gcd("abc123", workdir="/work/here")
+    assert result["hash"] == "abc123"
+    """Test commit diff with custom context lines."""
+    import subprocess
+
+    metadata_output = Completed(
+        stdout="def456|Bob Builder|bob@example.com|2024-01-02 14:00:00 +0000|fix: bug fix"
+    )
+
+    diff_output = Completed(stdout="diff content")
+    stats_output = Completed(stdout="stats content")
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        make_run(
+            [
+                (["git", "show", "--no-patch"], metadata_output),
+                (["git", "show", "-U5"], diff_output),
+                (["git", "show", "--stat"], stats_output),
+            ]
+        ),
+    )
+
+    result = get_commit_diff("def456", context_lines=5)
+
+    assert result["hash"] == "def456"
+    assert result["message"] == "fix: bug fix"
+
+
 def test_get_commit_diff_not_found(monkeypatch):
     """Test commit diff when commit doesn't exist."""
     import subprocess
@@ -566,6 +624,62 @@ def test_get_commit_files_with_rename(monkeypatch):
 
 
 def test_get_commit_files_with_binary(monkeypatch):
+    """Test handling of binary files in commit files output."""
+    import subprocess
+
+    metadata_output = Completed(
+        stdout="abc123|Alice|alice@example.com|2024-01-01 12:00:00 +0000|msg"
+    )
+    status_output = Completed(stdout="M\tbinfile\n")
+    numstat_output = Completed(stdout="-\t-\tbinfile\n")
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        make_run(
+            [
+                (["git", "show", "--no-patch"], metadata_output),
+                (["git", "show", "--name-status"], status_output),
+                (["git", "show", "--numstat"], numstat_output),
+            ]
+        ),
+    )
+
+    result = get_commit_files("abc123")
+
+    assert result["files"][0]["additions"] == 0
+    assert result["files"][0]["deletions"] == 0
+
+
+def test_get_commit_files_with_workdir(monkeypatch):
+    """When workdir provided, ensure '-C <root>' is used for file queries."""
+    import subprocess
+
+    # Resolve workdir -> repo root
+    monkeypatch.setattr("glin.git_tools.files.resolve_repo_root", lambda p: {"path": "/repo"})
+
+    metadata_output = Completed(
+        stdout="abc123|Alice|alice@example.com|2024-01-01 12:00:00 +0000|msg"
+    )
+    status_output = Completed(stdout="M\tfile.py\n")
+    numstat_output = Completed(stdout="1\t0\tfile.py\n")
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        make_run(
+            [
+                (["git", "-C", "/repo", "show", "--no-patch"], metadata_output),
+                (["git", "-C", "/repo", "show", "--name-status"], status_output),
+                (["git", "-C", "/repo", "show", "--numstat"], numstat_output),
+            ]
+        ),
+    )
+
+    from glin.git_tools.files import get_commit_files as _gcf
+
+    result = _gcf("abc123", workdir="/work/here")
+    assert result["hash"] == "abc123"
     """Test commit files with binary file (shown as '-' in numstat)."""
     import subprocess
 

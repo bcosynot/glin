@@ -1,23 +1,30 @@
 import subprocess
+from typing import Annotated, TypedDict
+
+from pydantic import Field
 
 from ..mcp_app import mcp
+from .utils import resolve_repo_root, run_git
 
 
-def get_current_branch() -> dict:
+def get_current_branch(workdir: str | None = None) -> dict:
     try:
-        name_res = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, check=True
-        )
+        repo_root: str | None = None
+        if workdir is not None:
+            root_res = resolve_repo_root(workdir)
+            if "error" in root_res:
+                return {"error": root_res["error"]}
+            repo_root = root_res.get("path")
+
+        name_res = run_git(["rev-parse", "--abbrev-ref", "HEAD"], repo_root=repo_root)
         name = name_res.stdout.strip()
         detached = name == "HEAD"
 
         upstream = None
         try:
-            up_res = subprocess.run(
-                ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
-                capture_output=True,
-                text=True,
-                check=True,
+            up_res = run_git(
+                ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
+                repo_root=repo_root,
             )
             upstream = up_res.stdout.strip() or None
         except subprocess.CalledProcessError:
@@ -27,11 +34,9 @@ def get_current_branch() -> dict:
         behind = 0
         if upstream:
             try:
-                cnt = subprocess.run(
-                    ["git", "rev-list", "--left-right", "--count", f"{name}...{upstream}"],
-                    capture_output=True,
-                    text=True,
-                    check=True,
+                cnt = run_git(
+                    ["rev-list", "--left-right", "--count", f"{name}...{upstream}"],
+                    repo_root=repo_root,
                 )
                 left, right = cnt.stdout.strip().split()
                 ahead = int(left)
@@ -52,9 +57,6 @@ def get_current_branch() -> dict:
         return {"error": f"Failed to get current branch: {str(e)}"}
 
 
-from typing import TypedDict
-
-
 class BranchLastCommit(TypedDict, total=False):
     hash: str
     author: str
@@ -73,20 +75,20 @@ class BranchEntry(TypedDict, total=False):
     error: str
 
 
-def list_branches() -> list[BranchEntry]:
+def list_branches(workdir: str | None = None) -> list[BranchEntry]:
     try:
+        repo_root: str | None = None
+        if workdir is not None:
+            root_res = resolve_repo_root(workdir)
+            if "error" in root_res:
+                return [{"error": root_res["error"]}]
+            repo_root = root_res.get("path")
+
         fmt = "%(refname:short)|%(objectname)|%(upstream:short)|%(authorname)|%(authoremail)|%(authordate:iso8601)|%(subject)"
-        res = subprocess.run(
-            ["git", "for-each-ref", f"--format={fmt}", "refs/heads"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+        res = run_git(["for-each-ref", f"--format={fmt}", "refs/heads"], repo_root=repo_root)
         branches: list[dict] = []
 
-        cur_res = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, check=True
-        )
+        cur_res = run_git(["rev-parse", "--abbrev-ref", "HEAD"], repo_root=repo_root)
         current = cur_res.stdout.strip()
 
         for line in res.stdout.strip().split("\n"):
@@ -99,11 +101,9 @@ def list_branches() -> list[BranchEntry]:
             behind = 0
             if upstream:
                 try:
-                    cnt = subprocess.run(
-                        ["git", "rev-list", "--left-right", "--count", f"{name}...{upstream}"],
-                        capture_output=True,
-                        text=True,
-                        check=True,
+                    cnt = run_git(
+                        ["rev-list", "--left-right", "--count", f"{name}...{upstream}"],
+                        repo_root=repo_root,
                     )
                     left, right = cnt.stdout.strip().split()
                     ahead = int(left)
@@ -143,8 +143,26 @@ def list_branches() -> list[BranchEntry]:
         "Get the current git branch information, including whether HEAD is detached, the upstream (if any), and ahead/behind counts versus upstream."
     ),
 )
-def _tool_get_current_branch() -> dict:  # pragma: no cover
-    return get_current_branch()
+def _tool_get_current_branch(
+    workdir: Annotated[
+        str,
+        Field(
+            description=(
+                "Required working directory path. Git runs in the repository containing this path "
+                "using 'git -C <root>', ensuring commands execute in the client's project repository "
+                "rather than the server process CWD. The path must reside inside a Git repository."
+            )
+        ),
+    ],
+) -> dict:  # pragma: no cover
+    if not workdir:
+        return {
+            "error": (
+                "Parameter 'workdir' is required. Provide a path inside the target Git repository "
+                "so the server can execute git commands with '-C <root>'."
+            )
+        }
+    return get_current_branch(workdir=workdir)
 
 
 @mcp.tool(
@@ -153,5 +171,25 @@ def _tool_get_current_branch() -> dict:  # pragma: no cover
         "List local branches with upstream, ahead/behind counts, and last commit metadata. The current branch is marked in the response."
     ),
 )
-def _tool_list_branches() -> list[BranchEntry]:  # pragma: no cover
-    return list_branches()  # type: ignore[return-value]
+def _tool_list_branches(
+    workdir: Annotated[
+        str,
+        Field(
+            description=(
+                "Required working directory path. Git runs in the repository containing this path "
+                "using 'git -C <root>', ensuring commands execute in the client's project repository "
+                "rather than the server process CWD. The path must reside inside a Git repository."
+            )
+        ),
+    ],
+) -> list[BranchEntry]:  # pragma: no cover
+    if not workdir:
+        return [
+            {
+                "error": (
+                    "Parameter 'workdir' is required. Provide a path inside the target Git repository "
+                    "so the server can execute git commands with '-C <root>'."
+                )
+            }
+        ]
+    return list_branches(workdir=workdir)  # type: ignore[return-value]
