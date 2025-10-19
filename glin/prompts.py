@@ -193,6 +193,7 @@ def worklog_entry_prompt(
         "'get_recent_conversations'; enriched Git stats via 'get_enriched_commits' (additions/deletions, files changed) when available; "
         "time-bounded work sessions via 'get_work_sessions' (to group commits into sessions) when available; and an optional file/language heatmap via "
         "'get_file_heatmap' if present.\n"
+        "When calling tools that accept a 'workdir' parameter (e.g., git tools like 'get_commits_by_date', 'get_recent_commits', 'get_branch_commits', 'get_commit_files', 'get_commit_diff', and repository tools like 'get_remote_origin'), always include 'workdir' pointing to a path inside the target repository (typically the current project workspace) so commands execute in the correct repo.\n"
         "Correlate commits with conversations as follows: For each commit, try to identify related conversations by matching keywords, issue keys, or PR numbers present in the commit message to conversation titles/previews. When you have high confidence, include the related conversation title next to the commit summary (e.g., 'Implements: <Conversation Title>'). Optionally record the association by calling 'link_commit_to_conversation' with a relevance score between 0.5 and 1.0.\n"
         "Then, scan the commits for merge commits that reference pull requests (patterns like "
         "'Merge pull request #123' or '#123' in the message). When PR numbers are found and the GitHub MCP is available, "
