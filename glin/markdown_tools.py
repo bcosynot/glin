@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from typing import TypedDict
 
+from .config import get_markdown_path
 from .mcp_app import mcp
 
 
@@ -42,7 +43,7 @@ def append_to_markdown(
     - Raw mode (preserve_lines=True): Lines are written as-is (no automatic bullet prefix). Useful for writing headings like "### Goals".
     - Ensures a heading for the specified date ("## YYYY-MM-DD"). If no date is provided, uses the current local date. Creates it if missing.
     - Appends content under the chosen date's heading, before the next heading or at the end.
-    - If file_path is provided, use that path; else GLIN_MD_PATH env var; else ./WORKLOG.md.
+    - Path resolution: file_path argument > GLIN_MD_PATH env var > glin.toml `markdown_path` > ./WORKLOG.md.
 
     Args:
         content: The text to append. Must be non-empty (after stripping). Newlines will be normalized.
@@ -62,8 +63,17 @@ def append_to_markdown(
 
         from datetime import date, datetime
 
-        # Resolve target path: parameter > env var > default
-        target = file_path or os.getenv("GLIN_MD_PATH") or "WORKLOG.md"
+        # Resolve target path: parameter > env var > glin.toml > default
+        if file_path and str(file_path).strip():
+            target = str(file_path).strip()
+            used_env_flag = False
+            defaulted_flag = False
+        else:
+            # Delegate env/TOML/default resolution to config
+            target = get_markdown_path()
+            used_env_flag = bool(os.getenv("GLIN_MD_PATH"))
+            # Consider defaulted when neither param nor env provided and config didn't override
+            defaulted_flag = (not used_env_flag) and (target == "WORKLOG.md")
         path = Path(target)
         if not path.is_absolute():
             path = Path.cwd() / path
@@ -199,8 +209,8 @@ def append_to_markdown(
             "heading": heading,
             "heading_added": heading_added,
             "heading_line_number": heading_line_number,
-            "used_env": file_path is None and bool(os.getenv("GLIN_MD_PATH")),
-            "defaulted": file_path is None and os.getenv("GLIN_MD_PATH") is None,
+            "used_env": used_env_flag,
+            "defaulted": defaulted_flag,
         }
         return success_response
     except Exception as e:
@@ -218,7 +228,7 @@ from fastmcp import Context  # type: ignore
         "Append content under a specified date heading (default: today) in a markdown file. "
         "Default behavior: each non-empty line becomes a bullet. Set preserve_lines=True to write "
         "lines as-is (useful for headings like '### Goals'). Creates date heading (## YYYY-MM-DD) "
-        "if missing. Target file can be specified, or defaults to GLIN_MD_PATH or ./WORKLOG.md."
+        "if missing. Target file can be specified, or resolves as: explicit file_path > GLIN_MD_PATH > glin.toml 'markdown_path' > ./WORKLOG.md."
     ),
 )
 async def _tool_append_to_markdown(
