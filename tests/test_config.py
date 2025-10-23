@@ -9,7 +9,6 @@ from unittest.mock import Mock, patch
 from glin.config import (
     _get_config_file_emails,
     _get_git_author_pattern,
-    _parse_emails_from_toml,
     create_config_file,
     get_tracked_emails,
     set_tracked_emails_env,
@@ -61,59 +60,6 @@ class TestGetTrackedEmails:
         assert emails == ["email1@example.com", "email2@example.com"]
 
 
-class TestParseEmailsFromToml:
-    def test_parse_simple_array(self):
-        """Should parse simple email array from TOML."""
-        content = 'track_emails = ["user1@example.com", "user2@example.com"]'
-        emails = _parse_emails_from_toml(content)
-        assert emails == ["user1@example.com", "user2@example.com"]
-
-    def test_parse_with_whitespace(self):
-        """Should handle whitespace in TOML array."""
-        content = 'track_emails = [ "user1@example.com" , "user2@example.com" ]'
-        emails = _parse_emails_from_toml(content)
-        assert emails == ["user1@example.com", "user2@example.com"]
-
-    def test_parse_single_quotes(self):
-        """Should handle single quotes in TOML array."""
-        content = "track_emails = ['user1@example.com', 'user2@example.com']"
-        emails = _parse_emails_from_toml(content)
-        assert emails == ["user1@example.com", "user2@example.com"]
-
-    def test_parse_mixed_quotes(self):
-        """Should handle mixed quotes in TOML array."""
-        content = """track_emails = ["user1@example.com", 'user2@example.com']"""
-        emails = _parse_emails_from_toml(content)
-        assert emails == ["user1@example.com", "user2@example.com"]
-
-    def test_parse_multiline_toml(self):
-        """Should find track_emails in multiline TOML content."""
-        content = """
-# Glin Configuration
-[section]
-other_setting = "value"
-
-track_emails = ["user@example.com"]
-
-[another_section]
-more_settings = true
-"""
-        emails = _parse_emails_from_toml(content)
-        assert emails == ["user@example.com"]
-
-    def test_parse_empty_array(self):
-        """Should handle empty array."""
-        content = "track_emails = []"
-        emails = _parse_emails_from_toml(content)
-        assert emails == []
-
-    def test_parse_no_track_emails(self):
-        """Should return empty list when track_emails not found."""
-        content = 'other_setting = ["not", "emails"]'
-        emails = _parse_emails_from_toml(content)
-        assert emails == []
-
-
 class TestConfigFileEmails:
     def test_reads_from_current_directory(self):
         """Should read config from current directory."""
@@ -145,8 +91,9 @@ class TestConfigFileEmails:
             config_path.write_text("invalid toml content [[[")
 
             with patch("pathlib.Path.cwd", return_value=Path(tmpdir)):
-                emails = _get_config_file_emails()
-                assert emails == []
+                with patch("pathlib.Path.home", return_value=Path(tmpdir) / "nonexistent"):
+                    emails = _get_config_file_emails()
+                    assert emails == []
 
 
 class TestSetTrackedEmailsEnv:
