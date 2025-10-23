@@ -5,6 +5,7 @@
 from ..config import (
     create_config_file,
     get_tracked_emails,  # re-export for backward-compatibility in tests/patching
+    get_tracked_repositories,  # re-export for config_tools
     set_tracked_emails_env,
 )
 from .branches import get_current_branch, list_branches
