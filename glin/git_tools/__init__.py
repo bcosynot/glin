@@ -35,26 +35,14 @@ from .remotes import get_remote_origin
 from .sessions import detect_work_sessions, get_work_sessions
 
 __all__ = [
-    # compatibility re-exports for patching
-    "get_tracked_emails",
-    "create_config_file",
-    "set_tracked_emails_env",
     # commits
     "CommitInfo",
     "ErrorResponse",
     "InfoResponse",
-    "get_recent_commits",
     "get_commits_by_date",
     "get_branch_commits",
-    "_build_git_log_command",
-    "_parse_commit_lines",
-    "_handle_git_error",
-    "_get_author_filters",
     # config
     "get_tracked_email_config",
-    "configure_tracked_emails",
-    "_check_git_config",
-    "_get_config_source",
     # diffs/files
     "get_commit_diff",
     "get_commit_files",
@@ -63,7 +51,6 @@ __all__ = [
     # remotes
     "get_remote_origin",
     # sessions
-    "detect_work_sessions",
     "get_work_sessions",
     # branches
     "get_current_branch",
