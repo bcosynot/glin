@@ -25,6 +25,12 @@ class EmailConfig(TypedDict):
     source: str
 
 
+class RepositoriesConfig(TypedDict):
+    tracked_repositories: list[str]
+    count: int
+    source: str
+
+
 def _check_git_config(key: str) -> bool:
     try:
         subprocess.run(["git", "config", "--get", key], capture_output=True, text=True, check=True)
@@ -56,12 +62,40 @@ def _get_config_source() -> str:
     return "none"
 
 
+def _get_repositories_config_source() -> str:
+    import os
+    from pathlib import Path
+
+    if os.getenv("GLIN_TRACK_REPOSITORIES") or os.getenv("GLIN_TRACK_REPOS"):
+        return "environment_variable"
+
+    config_paths = [
+        Path.cwd() / "glin.toml",
+        Path.home() / ".config" / "glin" / "glin.toml",
+        Path.home() / ".glin.toml",
+    ]
+    for p in config_paths:
+        if p.exists():
+            return f"config_file ({p})"
+
+    return "none"
+
+
 def get_tracked_email_config() -> EmailConfig:
     emails = git_tools.get_tracked_emails()
     return {
         "tracked_emails": emails,
         "count": len(emails),
         "source": git_tools._get_config_source(),
+    }
+
+
+def get_tracked_repositories_config() -> RepositoriesConfig:
+    repositories = git_tools.get_tracked_repositories()
+    return {
+        "tracked_repositories": repositories,
+        "count": len(repositories),
+        "source": _get_repositories_config_source(),
     }
 
 
@@ -105,6 +139,18 @@ def configure_tracked_emails(
 )
 def _tool_get_tracked_email_config() -> EmailConfig:  # pragma: no cover
     return get_tracked_email_config()
+
+
+@mcp.tool(
+    name="get_tracked_repositories_config",
+    description=(
+        "Get the current tracked repositories configuration. Returns the list of tracked "
+        "repositories, count, and configuration source (environment variable or config file). "
+        "Repositories can be local filesystem paths, GitHub shorthand (owner/repo), or full Git URLs."
+    ),
+)
+def _tool_get_tracked_repositories_config() -> RepositoriesConfig:  # pragma: no cover
+    return get_tracked_repositories_config()
 
 
 @mcp.tool(
