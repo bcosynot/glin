@@ -13,6 +13,7 @@ from typing import Annotated, TypedDict
 from fastmcp.utilities.logging import get_logger  # type: ignore
 from pydantic import Field
 
+from .config import get_markdown_path
 from .mcp_app import mcp
 
 log = get_logger("glin.prompts")
@@ -45,6 +46,7 @@ def _system_header(title: str) -> str:
         "(e.g., note which conversation a commit implements). When merge commits reference GitHub pull requests (e.g., "
         "'#123' or 'Merge pull request #123'), use the GitHub MCP 'pull_requests' toolset to fetch key PR details (title, author, state/merged, URL) and include them. "
         "Then produce a structured markdown yourself with sections: 🎯 Goals & Context, 💻 Technical Work, 📊 Metrics, 🔍 Key Decisions, ⚠️ Impact Assessment, 🚧 Open Items, 📚 Learnings. "
+        "Finally, if the worklog file contains any entry dated after a given Sunday, synthesize and append a Weekly Summary for the Monday..Sunday window ending on that Sunday. "
         "Do not call the 'generate_rich_worklog' tool; instead, synthesize these sections directly from the gathered data."
     ),
     tags=["worklog", "summary", "daily", "git", "commits"],
@@ -75,6 +77,7 @@ def worklog_entry_prompt(
         extra={"date_len": len(date), "inputs_len": len(inputs)},
     )
     system = _system_header("Create an engineering worklog entry from commits and notes")
+    md_path = get_markdown_path()
     user = (
         f"Create a worklog entry for the period: {date}. "
         "If you can call MCP tools, follow this workflow:\n\n"
@@ -159,7 +162,27 @@ def worklog_entry_prompt(
         "  • content = the date-specific markdown block with h3 sub-headings and bullets\n"
         "  • preserve_lines = true (so lines are written as-is without auto-bullets)\n"
         "  • file_path can be omitted (defaults to GLIN_MD_PATH or ./WORKLOG.md).\n"
+        f"  • Target worklog file path resolved now: {md_path}.\n"
         "- Make exactly one tool call per date with just that date's content. Do not batch multiple dates in one call.\n\n"
+        "WEEKLY SUMMARY (Monday..Sunday):\n"
+        "- After persisting all date blocks for the requested period, determine whether a full Monday..Sunday window has just completed AND newer entries exist past the Sunday.\n"
+        "- Compute SUNDAY S as the most recent past Sunday relative to 'now' or the latest date written, and MONDAY M = S - 6 days.\n"
+        f"- Read the target worklog file at: {md_path}. If a file-read tool is available (e.g., filesystem.read_file, fs.read, or similar), use it to obtain the markdown contents; otherwise, you may rely on the content you just generated for dates in M..S.\n"
+        "- If the file contains any entry with a date > S (i.e., there is content after that Sunday), then create a weekly summary for M..S under date S.\n"
+        "- Idempotency: Before writing, check under '## S' for an existing line that starts with '### 🗓️ Weekly Summary' or contains '<!-- weekly-summary:' with the same M..S range; if present, do not duplicate.\n"
+        "- Synthesis: Aggregate across entries from M..S (scan their sections) and produce a concise weekly narrative. Use this structure:\n"
+        "  ### 🗓️ Weekly Summary (M..S)\n"
+        "  - Highlights: top 3–6 outcomes with links to key commits/PRs.\n"
+        "  - Metrics: totals (commits, PRs opened/merged, lines added/removed when available).\n"
+        "  - Decisions & Risks: pivotal decisions and noteworthy risks surfaced this week.\n"
+        "  - Learnings: 2–5 lessons worth remembering.\n"
+        "  - Next Week Focus: concrete priorities and first steps.\n"
+        "  <!-- weekly-summary:M..S -->\n"
+        "- Persist the weekly summary by calling 'append_to_markdown' once with:\n"
+        "  • date_str = S\n"
+        "  • content = the weekly summary block shown above (including the marker comment)\n"
+        "  • preserve_lines = true\n"
+        "- Make exactly one tool call per Sunday summary.\n\n"
         "Edge cases:\n"
         "- If a date has neither commits nor conversations, you may persist a single bullet line (e.g., '- No recorded commits or conversations (planning/research/offline work possible).') inside the '### Work' section.\n"
         "- If Git tools are unavailable or return errors for the period, add a one-line 'Data unavailable' note and proceed with the remaining sources.\n"
