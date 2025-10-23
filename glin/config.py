@@ -14,6 +14,7 @@ Also supports a lightweight `glin.toml` file with keys:
 
 import os
 import subprocess
+import tomllib
 from pathlib import Path
 
 
@@ -64,48 +65,16 @@ def _get_config_file_emails() -> list[str]:
     for config_path in config_paths:
         if config_path.exists():
             try:
-                # Simple TOML parsing for emails array
-                content = config_path.read_text()
-                emails = _parse_emails_from_toml(content)
+                with open(config_path, "rb") as f:
+                    data = tomllib.load(f)
+                emails = data.get("track_emails", [])
                 if emails:
                     return emails
-            except Exception:
+            except (tomllib.TOMLDecodeError, OSError):
                 # If config file is malformed, continue to next location
                 continue
 
     return []
-
-
-def _parse_emails_from_toml(content: str) -> list[str]:
-    """
-    Simple TOML parser for extracting emails array.
-
-    Looks for: track_emails = ["email1", "email2", ...]
-
-    Args:
-        content: TOML file content
-
-    Returns:
-        List of emails found in the configuration
-    """
-    emails = []
-    lines = content.split("\n")
-
-    for line in lines:
-        line = line.strip()
-        if line.startswith("track_emails"):
-            # Extract emails from array format
-            if "=" in line:
-                array_part = line.split("=", 1)[1].strip()
-                if array_part.startswith("[") and array_part.endswith("]"):
-                    # Remove brackets and split by comma
-                    items = array_part[1:-1].split(",")
-                    for item in items:
-                        item = item.strip().strip('"').strip("'")
-                        if item:
-                            emails.append(item)
-
-    return emails
 
 
 def _get_git_author_pattern() -> str | None:
@@ -255,51 +224,6 @@ def _get_common_config_paths() -> list[Path]:
     ]
 
 
-def _parse_list_from_toml(content: str, key: str) -> list[str]:
-    """Extract a simple string array from TOML for a given top-level key.
-
-    Example line handled: key = ["a", "b", "c"]
-    The parser is intentionally simple and line-oriented (consistent with _parse_emails_from_toml).
-    """
-    values: list[str] = []
-    for raw in content.split("\n"):
-        line = raw.strip()
-        if not line or not line.startswith(key):
-            continue
-        if "=" not in line:
-            continue
-        array_part = line.split("=", 1)[1].strip()
-        if not (array_part.startswith("[") and array_part.endswith("]")):
-            continue
-        items = array_part[1:-1].split(",")
-        for item in items:
-            s = item.strip().strip('"').strip("'")
-            if s:
-                values.append(s)
-    return values
-
-
-def _parse_string_from_toml(content: str, key: str) -> str | None:
-    """Extract a simple string value from TOML for a given top-level key.
-
-    Example line handled: key = "value"
-    The parser is intentionally simple and line-oriented.
-    """
-    for raw in content.split("\n"):
-        line = raw.strip()
-        if not line or not line.startswith(key):
-            continue
-        if "=" not in line:
-            continue
-        value_part = line.split("=", 1)[1].strip()
-        # Allow quoted values; ignore non-quoted simple values for safety
-        if (value_part.startswith('"') and value_part.endswith('"')) or (
-            value_part.startswith("'") and value_part.endswith("'")
-        ):
-            return value_part[1:-1]
-    return None
-
-
 def _get_config_file_value(key: str) -> str | None:
     """Read a simple string value from glin.toml for the given key.
 
@@ -308,11 +232,12 @@ def _get_config_file_value(key: str) -> str | None:
     for p in _get_common_config_paths():
         if p.exists():
             try:
-                content = p.read_text()
-                val = _parse_string_from_toml(content, key)
+                with open(p, "rb") as f:
+                    data = tomllib.load(f)
+                val = data.get(key)
                 if val:
                     return val
-            except Exception:
+            except (tomllib.TOMLDecodeError, OSError):
                 continue
     return None
 
@@ -322,11 +247,12 @@ def _get_config_file_repositories() -> list[str]:
     for p in _get_common_config_paths():
         if p.exists():
             try:
-                content = p.read_text()
-                repos = _parse_list_from_toml(content, "track_repositories")
+                with open(p, "rb") as f:
+                    data = tomllib.load(f)
+                repos = data.get("track_repositories", [])
                 if repos:
                     return repos
-            except Exception:
+            except (tomllib.TOMLDecodeError, OSError):
                 continue
     return []
 
