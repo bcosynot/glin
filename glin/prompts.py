@@ -13,7 +13,6 @@ from typing import Annotated, TypedDict
 from fastmcp.utilities.logging import get_logger  # type: ignore
 from pydantic import Field
 
-from .config import get_tracked_repositories
 from .mcp_app import mcp
 
 log = get_logger("glin.prompts")
@@ -78,9 +77,25 @@ def worklog_entry_prompt(
     system = _system_header("Create an engineering worklog entry from commits and notes")
     user = (
         f"Create a worklog entry for the period: {date}. "
-        "If you can call MCP tools, first gather context for this period: Git commits via 'get_commits_by_date'; recent conversations via "
-        "'get_recent_conversations'; enriched Git stats via 'get_enriched_commits' (additions/deletions, files changed) when available; "
-        "When calling tools that accept a 'workdir' parameter (e.g., git tools like 'get_commits_by_date', 'get_recent_commits', 'get_branch_commits', 'get_commit_files', 'get_commit_diff', and repository tools like 'get_remote_origin'), always include 'workdir' pointing to a path inside the target repository (typically the current project workspace) so commands execute in the correct repo.\n"
+        "If you can call MCP tools, follow this workflow:\n\n"
+        "STEP 1 — Get tracked repositories configuration:\n"
+        "- First, call 'get_tracked_repositories_config' to retrieve the list of repositories to include in the worklog.\n"
+        "- The tool returns: tracked_repositories (list), count, and source (environment variable or config file).\n"
+        "- If the count is 0 (no tracked repositories configured), fall back to the current directory as the single repository to process.\n\n"
+        "STEP 2 — Iteratively gather data for each repository:\n"
+        "- For each repository R in the tracked_repositories list (or current directory if empty):\n"
+        "  • If R is a local filesystem path that contains a Git repository:\n"
+        "    - Call git MCP tools with 'workdir' parameter set to R (e.g., 'get_commits_by_date', 'get_recent_commits', 'get_branch_commits', 'get_commit_files', 'get_commit_diff', 'get_remote_origin').\n"
+        "    - Gather: commits via 'get_commits_by_date'; enriched stats via 'get_enriched_commits' (additions/deletions, files changed) when available.\n"
+        "    - To generate commit links: call 'get_remote_origin' with workdir=R, then 'determine_commit_url_prefix' with the returned URL.\n"
+        "  • If R is a remote identifier (e.g., 'owner/repo' GitHub shorthand or a Git URL):\n"
+        "    - Use the GitHub MCP or the GitHub CLI to fetch commits and related activity for that repository.\n"
+        "    - Extract owner/repo from the identifier and query GitHub APIs accordingly.\n"
+        "  • For each repository, use the Github MCP, falling back to the GitHub CLI, to fetch PR and Issues details (PRs or issues authored by the user, PRs reviewed by the user, or comments on PRs or issues left by the user) for the specified period.\n"
+        "  • Collect data for the specified period across all repositories before proceeding to synthesis.\n\n"
+        "STEP 3 — Gather additional context:\n"
+        "- Recent conversations via 'get_recent_conversations'.\n"
+        "When calling tools that accept a 'workdir' parameter, always include 'workdir' pointing to a path inside the target repository so commands execute in the correct repo.\n"
         "Correlate commits with conversations as follows: For each commit, try to identify related conversations by matching keywords, issue keys, or PR numbers present in the commit message to conversation titles/previews. When you have high confidence, include the related conversation title next to the commit summary (e.g., 'Implements: <Conversation Title>'). Optionally record the association by calling 'link_commit_to_conversation' with a relevance score between 0.5 and 1.0.\n"
         "Then, scan the commits for merge commits that reference pull requests (patterns like "
         "'Merge pull request #123' or '#123' in the message). When PR numbers are found and the GitHub MCP is available, "
@@ -149,24 +164,8 @@ def worklog_entry_prompt(
         "- If a date has neither commits nor conversations, you may persist a single bullet line (e.g., '- No recorded commits or conversations (planning/research/offline work possible).') inside the '### Work' section.\n"
         "- If Git tools are unavailable or return errors for the period, add a one-line 'Data unavailable' note and proceed with the remaining sources.\n"
     )
-    # Inject repository scope guidance based on user configuration
-    try:
-        repos = get_tracked_repositories()
-    except Exception:
-        repos = []
-    if repos:
-        names = ", ".join(repos)
-        user += (
-            "\nRepository scope:\n"
-            f"- Include the following repositories configured by the user: {names}.\n"
-            "- For each repository R:\n"
-            "  • If R is a local path on disk that contains a Git repository, call git MCP tools with 'workdir' set to R.\n"
-            "  • If R is a remote identifier (e.g., 'owner/repo' or a Git URL), use the GitHub MCP to fetch PRs/issues and recent activity for that repository when available.\n"
-            "  • When generating commit links per repository, first call 'get_remote_origin' with the appropriate 'workdir' (when local) for R, then 'determine_commit_url_prefix' to build links specific to R.\n"
-            "- Consider commits and PRs for each listed repository in addition to the current workspace.\n"
-        )
     if inputs:
-        user += f"<INPUTS>\n{inputs}\n</INPUTS>"
+        user += f"\n\n<INPUTS>\n{inputs}\n</INPUTS>"
     msgs = [
         {"role": "system", "content": system},
         {"role": "user", "content": user},
