@@ -64,14 +64,15 @@ def worklog_entry_prompt(
     inputs: Annotated[
         str,
         Field(description="Free-text notes, bullets, or context to include in the worklog entry."),
-    ],
+    ] = "",
 ) -> list[dict[str, str]]:
+    # Be lenient: do not fail rendering when clients omit arguments while previewing.
+    # Default to a reasonable period and allow empty inputs.
     if not date or not date.strip():
-        log.warning("worklog_entry: empty date arg")
-        raise ValueError("date argument is required and cannot be empty")
-    if not inputs or not inputs.strip():
-        log.warning("worklog_entry: empty inputs arg")
-        raise ValueError("inputs argument is required and cannot be empty")
+        log.warning("worklog_entry: empty date arg; defaulting to 'today'")
+        date = "today"
+    if inputs is None:
+        inputs = ""
     log.info(
         "worklog_entry: rendering",
         extra={"date_len": len(date), "inputs_len": len(inputs)},
