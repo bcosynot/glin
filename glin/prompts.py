@@ -51,7 +51,7 @@ def _system_header(title: str) -> str:
     ),
     tags=["worklog", "summary", "daily", "git", "commits"],
 )
-def worklog_entry_prompt(
+async def worklog_entry_prompt(
     date: Annotated[
         str,
         Field(
