@@ -13,6 +13,7 @@ from typing import Annotated, TypedDict
 from fastmcp.utilities.logging import get_logger  # type: ignore
 from pydantic import Field
 
+from .config import get_markdown_path
 from .mcp_app import mcp
 
 log = get_logger("glin.prompts")
@@ -76,6 +77,7 @@ def worklog_entry_prompt(
         extra={"date_len": len(date), "inputs_len": len(inputs)},
     )
     system = _system_header("Create an engineering worklog entry from commits and notes")
+    md_path = get_markdown_path()
     user = (
         f"Create a worklog entry for the period: {date}. "
         "If you can call MCP tools, follow this workflow:\n\n"
@@ -160,11 +162,12 @@ def worklog_entry_prompt(
         "  • content = the date-specific markdown block with h3 sub-headings and bullets\n"
         "  • preserve_lines = true (so lines are written as-is without auto-bullets)\n"
         "  • file_path can be omitted (defaults to GLIN_MD_PATH or ./WORKLOG.md).\n"
+        f"  • Target worklog file path resolved now: {md_path}.\n"
         "- Make exactly one tool call per date with just that date's content. Do not batch multiple dates in one call.\n\n"
         "WEEKLY SUMMARY (Monday..Sunday):\n"
         "- After persisting all date blocks for the requested period, determine whether a full Monday..Sunday window has just completed AND newer entries exist past the Sunday.\n"
         "- Compute SUNDAY S as the most recent past Sunday relative to 'now' or the latest date written, and MONDAY M = S - 6 days.\n"
-        "- Read the target worklog file (GLIN_MD_PATH or ./WORKLOG.md). If a file-read tool is available (e.g., filesystem.read_file, fs.read, or similar), use it to obtain the markdown contents; otherwise, you may rely on the content you just generated for dates in M..S.\n"
+        f"- Read the target worklog file at: {md_path}. If a file-read tool is available (e.g., filesystem.read_file, fs.read, or similar), use it to obtain the markdown contents; otherwise, you may rely on the content you just generated for dates in M..S.\n"
         "- If the file contains any entry with a date > S (i.e., there is content after that Sunday), then create a weekly summary for M..S under date S.\n"
         "- Idempotency: Before writing, check under '## S' for an existing line that starts with '### 🗓️ Weekly Summary' or contains '<!-- weekly-summary:' with the same M..S range; if present, do not duplicate.\n"
         "- Synthesis: Aggregate across entries from M..S (scan their sections) and produce a concise weekly narrative. Use this structure:\n"
