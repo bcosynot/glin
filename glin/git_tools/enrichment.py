@@ -1,5 +1,7 @@
 from datetime import datetime
-from typing import Any, TypedDict
+from typing import Annotated, Any, TypedDict
+
+from pydantic import Field
 
 from ..mcp_app import mcp
 from .analysis import (
@@ -35,7 +37,9 @@ class EnrichedResult(TypedDict):
     generated_at: str
 
 
-def get_enriched_commits(since: str, until: str = "now") -> EnrichedResult | list[dict]:
+def get_enriched_commits(
+    since: str, until: str = "now", workdir: str | None = None
+) -> EnrichedResult | list[dict]:
     """Return commits within a date range enriched with analysis metadata.
 
     Adds per-commit statistics, conventional commit categorization, and merge/PR detection.
@@ -45,7 +49,7 @@ def get_enriched_commits(since: str, until: str = "now") -> EnrichedResult | lis
     for the caller to handle. Otherwise, return a structured object with commits
     and aggregated totals.
     """
-    commits = get_commits_by_date(since, until)
+    commits = get_commits_by_date(since, until, workdir=workdir)
 
     # Forward-through behavior for non-standard responses
     if not isinstance(commits, list) or not commits:
@@ -66,9 +70,9 @@ def get_enriched_commits(since: str, until: str = "now") -> EnrichedResult | lis
             continue
 
         sha = c["hash"]
-        stats = get_commit_statistics(sha)
-        category = categorize_commit(sha, is_hash=True)
-        merge_info = detect_merge_info(sha)
+        stats = get_commit_statistics(sha, workdir=workdir)
+        category = categorize_commit(sha, is_hash=True, workdir=workdir)
+        merge_info = detect_merge_info(sha, workdir=workdir)
 
         # Aggregate totals if stats have expected shape
         try:
@@ -110,5 +114,15 @@ def get_enriched_commits(since: str, until: str = "now") -> EnrichedResult | lis
 async def _tool_get_enriched_commits(
     since: str,
     until: str = "now",
+    workdir: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Optional working directory for Git operations. When set, Git runs in the repository "
+                "containing this path using 'git -C <root>', ensuring commands execute in the client's "
+                "project repository rather than the server process CWD."
+            )
+        ),
+    ] = None,
 ) -> EnrichedResult | list[dict]:
-    return get_enriched_commits(since, until)
+    return get_enriched_commits(since, until, workdir=workdir)
