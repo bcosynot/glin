@@ -189,8 +189,6 @@ Created or verified:
 
 Next steps:
   - You can edit $GLIN_CONFIG_FILE to adjust emails/repos.
-  - Run: make run-stdio    # to start the MCP server (stdio)
-  - Or:  make run-http     # to start on http://localhost:8000
 
 Tip: You can also set env vars temporarily, e.g.:
   export GLIN_DB_PATH="$DB_PATH"
