@@ -38,7 +38,7 @@ def test_default_no_db_autowrite(monkeypatch, tmp_path):
         return len(payload)
 
     # Monkeypatch bulk_upsert_commits; since import is local inside function we patch the module
-    import glin.storage.commits as storage_commits
+    import seev.storage.commits as storage_commits
 
     monkeypatch.setattr(storage_commits, "bulk_upsert_commits", fake_bulk_upsert)
 

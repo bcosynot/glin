@@ -1,6 +1,6 @@
 import sqlite3
 
-from glin.storage import db as sdb
+from seev.storage import db as sdb
 
 
 def test_init_db_and_migrate_idempotent(tmp_path):

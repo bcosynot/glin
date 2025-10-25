@@ -1,6 +1,6 @@
 from typing import Any
 
-from glin.git_tools.enrichment import (
+from seev.git_tools.enrichment import (
     EnrichedCommit,
     get_enriched_commits,
 )

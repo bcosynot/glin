@@ -1,4 +1,4 @@
-from glin.git_tools import (
+from seev.git_tools import (
     get_branch_commits,
     get_current_branch,
     list_branches,
@@ -222,7 +222,7 @@ def test_get_current_branch_with_workdir(monkeypatch):
         ),
     )
 
-    from glin.git_tools.branches import get_current_branch as _get
+    from seev.git_tools.branches import get_current_branch as _get
 
     res = _get(workdir="/work/here")
     assert res["name"] == "main"
@@ -326,7 +326,7 @@ def test_list_branches_with_workdir(monkeypatch):
         ),
     )
 
-    from glin.git_tools.branches import list_branches as _list
+    from seev.git_tools.branches import list_branches as _list
 
     branches = _list(workdir="/work/here")
     assert any(b.get("is_current") for b in branches)
@@ -381,7 +381,7 @@ def test_get_branch_commits_with_workdir(monkeypatch):
                 ]
             ),
         )
-        from glin.git_tools.commits import get_branch_commits as _gbc
+        from seev.git_tools.commits import get_branch_commits as _gbc
 
         commits = _gbc("feature", count=2, workdir="/work/here")
         assert len(commits) == 2

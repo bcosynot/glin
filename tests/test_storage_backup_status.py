@@ -1,4 +1,4 @@
-from glin.storage import db as sdb
+from seev.storage import db as sdb
 
 
 def test_create_backup_and_status(tmp_path):

@@ -2,7 +2,7 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
-from glin.scaffold_tools import init_glin
+from seev.scaffold_tools import init_glin
 
 
 def read_text(p: Path) -> str:

@@ -1,4 +1,4 @@
-from glin.git_tools.analysis import categorize_commit
+from seev.git_tools.analysis import categorize_commit
 
 
 def test_categorize_accepts_extended_types_case_insensitive():

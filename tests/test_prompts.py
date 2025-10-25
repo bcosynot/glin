@@ -1,4 +1,4 @@
-from glin.mcp_app import mcp
+from seev.mcp_app import mcp
 
 
 def test_prompts_are_registered_in_stub():
