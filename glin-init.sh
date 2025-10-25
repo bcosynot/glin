@@ -8,6 +8,8 @@
 #
 # Usage:
 #   ./glin-init.sh [options] <target_dir>
+#   If <target_dir> or options are omitted, the script will prompt for each;
+#   press Enter to accept defaults or leave optional fields blank.
 #
 # Options:
 #   -e, --emails CSV       Comma-separated emails to track (e.g. a@b.com,b@c.com).
@@ -54,10 +56,6 @@ REPOS=""
 ASSUME_YES=0
 
 # Parse args
-if [[ $# -eq 0 ]]; then
-  print_help; exit 1
-fi
-
 ARGS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -73,14 +71,50 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Interactive prompts for missing values when not assuming yes
+prompt_with_default() {
+  # prompt_with_default <prompt> <default>
+  local prompt="$1"
+  local def="$2"
+  local input
+  read -r -p "$prompt${def:+ [$def]}: " input || true
+  if [[ -z "$input" ]]; then
+    echo "$def"
+  else
+    echo "$input"
+  fi
+}
+
+DEFAULT_TARGET_DIR="$HOME/.local/share/glin"
+
 if [[ ${#ARGS[@]} -lt 1 ]]; then
-  echo "Error: missing <target_dir>." >&2
-  echo; print_help; exit 2
+  if [[ ${ASSUME_YES:-0} -eq 1 ]]; then
+    TARGET_DIR="$DEFAULT_TARGET_DIR"
+  else
+    TARGET_DIR=$(prompt_with_default "Enter target directory for Glin data" "$DEFAULT_TARGET_DIR")
+  fi
+else
+  TARGET_DIR=${ARGS[0]}
 fi
 
-TARGET_DIR=${ARGS[0]}
 # Expand ~ in paths
 TARGET_DIR=$(eval echo "$TARGET_DIR")
+
+# If not assuming yes, prompt for other missing options
+if [[ ${ASSUME_YES:-0} -eq 0 ]]; then
+  if [[ -z "$MD_NAME" || "$MD_NAME" == "WORKLOG.md" ]]; then
+    MD_NAME=$(prompt_with_default "Markdown filename" "$MD_NAME")
+  fi
+  if [[ -z "$DB_NAME" || "$DB_NAME" == "glin.sqlite3" ]]; then
+    DB_NAME=$(prompt_with_default "Database filename" "$DB_NAME")
+  fi
+  if [[ -z "$EMAILS" ]]; then
+    read -r -p "Comma-separated emails to track (optional): " EMAILS || true
+  fi
+  if [[ -z "$REPOS" ]]; then
+    read -r -p "Comma-separated repositories to track (optional): " REPOS || true
+  fi
+fi
 
 # Resolve XDG config path
 XDG_CONFIG_HOME_DEFAULT="$HOME/.config"
