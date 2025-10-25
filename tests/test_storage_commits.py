@@ -1,4 +1,4 @@
-from glin.storage import commits as sc, db as sdb
+from seev.storage import commits as sc, db as sdb
 
 
 def test_insert_and_get_commit_roundtrip(tmp_path):

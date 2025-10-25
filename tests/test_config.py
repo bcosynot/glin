@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from glin.config import (
+from seev.config import (
     _get_config_file_emails,
     _get_git_author_pattern,
     create_config_file,

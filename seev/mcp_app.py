@@ -47,7 +47,7 @@ except Exception:  # pragma: no cover - used only when fastmcp is unavailable
 
 
 # Single shared MCP instance used by all tool modules
-mcp = FastMCP("Glin - Your worklog, without the work")
+mcp = FastMCP("Seev - Your worklog, without the work")
 
 # Ensure we can introspect prompts during tests even if fastmcp is installed
 if not hasattr(mcp, "_prompts"):
@@ -150,7 +150,7 @@ def _configure_logging_from_env() -> None:
                 root.addHandler(sh)
 
         # Align package loggers with chosen level
-        logging.getLogger("glin").setLevel(level)
+        logging.getLogger("seev").setLevel(level)
         logging.getLogger("fastmcp").setLevel(level)
 
     except Exception as e:  # pragma: no cover - best-effort, non-fatal

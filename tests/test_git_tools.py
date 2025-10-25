@@ -1,4 +1,4 @@
-from glin.git_tools.commits import (
+from seev.git_tools.commits import (
     _build_git_log_command,
     _get_author_filters,
     _handle_git_error,
@@ -6,14 +6,14 @@ from glin.git_tools.commits import (
     get_commits_by_date,
     get_recent_commits,
 )
-from glin.git_tools.config_tools import (
+from seev.git_tools.config_tools import (
     _check_git_config,
     _get_config_source,
     configure_tracked_emails,
     get_tracked_email_config,
 )
-from glin.git_tools.diffs import get_commit_diff
-from glin.git_tools.files import get_commit_files
+from seev.git_tools.diffs import get_commit_diff
+from seev.git_tools.files import get_commit_files
 
 
 class FakeCPError(Exception):

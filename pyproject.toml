@@ -1,5 +1,5 @@
 [project]
-name = "glin"
+name = "seev"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -16,7 +16,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "-q --cov=glin --cov-report=term-missing --cov-report=xml:coverage.xml"
+addopts = "-q --cov=seev --cov-report=term-missing --cov-report=xml:coverage.xml"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 
@@ -42,7 +42,7 @@ unfixable = []
 
 [tool.ruff.lint.isort]
 # Treat this project as first-party for import sorting
-known-first-party = ["glin"]
+known-first-party = ["seev"]
 combine-as-imports = true
 
 [tool.ruff.format]
