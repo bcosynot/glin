@@ -1,0 +1,37 @@
+site_name: Seev
+site_description: "Seev documentation (Phase 1 skeleton)"
+site_url: "https://bcosynot.github.io/seev/"  # temporary
+repo_url: "https://github.com/bcosynot/seev"
+edit_uri: "edit/main/docs/"
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - content.code.copy
+    - content.action.edit
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python: {}
+  - git-revision-date-localized:
+      fallback_to_build_date: true
+      strict: false
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+
+nav:
+  - Home: index.md
+  - Guides:
+      - Guides Home: guides/index.md
+  - Reference:
+      - Reference Home: reference/index.md
+  - Troubleshooting: troubleshooting.md
+  - Changelog: changelog.md
