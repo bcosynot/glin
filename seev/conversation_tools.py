@@ -4,15 +4,15 @@ from .mcp_app import mcp
 from .storage.conversations import (
     add_conversation,
     add_message,
-    list_messages,
-    query_conversations,
 )
+from .storage.summaries import add_summary, list_summaries
 
 
 @mcp.tool(
     name="record_conversation_message",
     description=(
-        "Record a message in a coding conversation. If conversation_id is None, a new "
+        "[DEPRECATED] Record a message in a coding conversation. Prefer using "
+        "record_conversation_summary to persist summaries. If conversation_id is None, a new "
         "conversation is created. Returns conversation_id and message_id."
     ),
 )
@@ -49,46 +49,56 @@ async def record_conversation_message(
 
 
 @mcp.tool(
+    name="record_conversation_summary",
+    description=(
+        "Record a summary row for a conversation on a given date. If conversation_id is None, "
+        "a new conversation is created (optionally with title). Returns the summary id and "
+        "the conversation id."
+    ),
+)
+async def record_conversation_summary(
+    date: str,
+    summary: str,
+    conversation_id: int | None = None,
+    title: str | None = None,
+) -> dict[str, Any]:
+    """Store a conversation summary into the dedicated table and return identifiers."""
+    if conversation_id is None:
+        conversation_id = add_conversation(title=title)
+    # If title is provided, we keep it in the summary record; otherwise reuse existing conv title
+    sid = add_summary(date=date, conversation_id=conversation_id, title=title, summary=summary)
+    return {
+        "summary_id": int(sid),
+        "conversation_id": int(conversation_id),
+        "date": date,
+        "title": title,
+        "summary_length": len(summary),
+    }
+
+
+@mcp.tool(
     name="get_recent_conversations",
     description=(
-        "Get recent conversations, optionally filtered by ISO date (YYYY-MM-DD). "
-        "Returns conversation metadata with message counts and a preview of the first message."
+        "Get recent conversation summaries from storage, optionally filtered by ISO date "
+        "(YYYY-MM-DD). Returns rows containing date, conversation_id, title, and summary."
     ),
 )
 async def get_recent_conversations(
     date: str | None = None, limit: int = 10
 ) -> list[dict[str, Any]]:
-    """List recent conversations with lightweight message metadata.
+    """List recent conversation summaries.
 
     Args:
-        date: Optional ISO date string to restrict conversations created on that date.
-        limit: Max number of conversations to return.
+        date: Optional ISO date string (YYYY-MM-DD) to restrict results to that date.
+        limit: Max number of summaries to return.
 
     Returns:
-        A list of conversation dictionaries enriched with message_count and first_message preview.
+        A list of dictionaries with keys: id, date, conversation_id, title, summary, created_at.
     """
-    filters: dict[str, Any] = {"limit": limit, "order_by": "updated_at", "order": "desc"}
+    f: dict[str, Any] = {"limit": limit}
     if date:
-        filters["created_from"] = f"{date} 00:00:00"
-        filters["created_until"] = f"{date} 23:59:59"
+        f["date"] = date
 
-    conversations = query_conversations(filters)
-
-    results: list[dict[str, Any]] = []
-    for conv in conversations:
-        messages = list_messages(conv["id"])  # returns TypedDicts
-        first_msg = None
-        if messages:
-            try:
-                first_msg = messages[0]["content"][:100]
-            except Exception:
-                first_msg = None
-        results.append(
-            {
-                **conv,
-                "message_count": len(messages),
-                "first_message": first_msg,
-            }
-        )
-
-    return results
+    summaries = list_summaries(f)
+    # Ensure plain dicts are returned
+    return [dict(s) for s in summaries]

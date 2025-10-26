@@ -161,9 +161,30 @@ def _mig_2(conn: sqlite3.Connection) -> None:
     )
 
 
+def _mig_3(conn: sqlite3.Connection) -> None:
+    """Migration V3: Add conversation_summaries table."""
+    conn.executescript(
+        """
+        CREATE TABLE conversation_summaries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT NOT NULL, -- YYYY-MM-DD
+            conversation_id INTEGER NOT NULL,
+            title TEXT,
+            summary TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX idx_conv_summaries_date ON conversation_summaries(date);
+        CREATE INDEX idx_conv_summaries_conv ON conversation_summaries(conversation_id);
+        """
+    )
+
+
 MIGRATIONS: dict[int, MigrationFn] = {
     1: _mig_1,
     2: _mig_2,
+    3: _mig_3,
 }
 
 
@@ -269,6 +290,7 @@ def get_db_status(db_path: str | None = None) -> DBStatus:
         "schema_version",
         "conversations",
         "messages",
+        "conversation_summaries",
         "commits",
         "commit_files",
         "commit_conversations",
