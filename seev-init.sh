@@ -220,6 +220,222 @@ db_path = "${DB_PATH/#$HOME/~}"
 markdown_path = "${MD_PATH/#$HOME/~}"
 TOML
 
+# === Optional: Configure MCP clients to use the Seev server ===
+# We support: Junie (JetBrains), Cursor, Claude Code/Desktop, VS Code
+# Defaults: transport=stdio, command=uvx, args=(--from git+https://github.com/bcosynot/seev.git seev)
+
+have_cmd() { command -v "$1" >/dev/null 2>&1; }
+
+# Ensure `uv` is installed (Seev uses `uvx` to run/install its CLI and tools)
+# - We ask for confirmation first (unless --yes was passed)
+# - We print the official docs link so the user knows what is being installed
+ensure_uv() {
+  # If either `uvx` or `uv` exists, we're good
+  if have_cmd uvx || have_cmd uv; then
+    return 0
+  fi
+
+  echo
+  echo "uv is not installed on this system."
+  echo "Why uv: Seev uses uv to quickly and reproducibly install and run (via 'uvx')," \
+       "and some optional setup in this script expects 'uvx' to be available."
+  echo "Learn more about uv: https://docs.astral.sh/uv/"
+
+  local DO_INSTALL=0
+  if [[ ${ASSUME_YES:-0} -eq 1 ]]; then
+    DO_INSTALL=1
+  else
+    if confirm "Install uv now? (see https://docs.astral.sh/uv/ for details)"; then
+      DO_INSTALL=1
+    else
+      echo "Skipping uv installation at your request."
+      echo "Note: 'uvx' commands and MCP client auto-configuration in this script may not work until uv is installed."
+      return 0
+    fi
+  fi
+
+  if [[ $DO_INSTALL -eq 1 ]]; then
+    echo "Installing uv using the official installer..."
+    if have_cmd curl; then
+      if ! sh -c "$(curl -fsSL https://astral.sh/uv/install.sh)"; then
+        echo "uv installation failed via curl. You can install manually from https://docs.astral.sh/uv/."
+        return 0
+      fi
+    elif have_cmd wget; then
+      if ! sh -c "$(wget -qO- https://astral.sh/uv/install.sh)"; then
+        echo "uv installation failed via wget. You can install manually from https://docs.astral.sh/uv/."
+        return 0
+      fi
+    else
+      echo "Neither curl nor wget is available, cannot auto-install uv."
+      echo "Please see https://docs.astral.sh/uv/ for manual installation instructions."
+      return 0
+    fi
+
+    # Try to make uv available in the current session (common install location)
+    export PATH="$HOME/.local/bin:$PATH"
+
+    if have_cmd uvx || have_cmd uv; then
+      echo "uv installed successfully. If commands are still not found, restart your shell so PATH updates apply."
+    else
+      echo "uv installation completed but the 'uv' command is not yet available on PATH."
+      echo "You may need to restart your terminal or add ~/.local/bin to PATH. See https://docs.astral.sh/uv/."
+    fi
+  fi
+}
+
+# Perform the check early so subsequent steps (like MCP setup) can rely on 'uvx'
+ensure_uv
+
+json_upsert_server() {
+  # json_upsert_server <file> <name> <command> <args_json> <transport>
+  local file="$1" name="$2" cmd="$3" args_json="$4" transport="$5"
+  local dir
+  dir=$(dirname "$file")
+  mkdir -p "$dir"
+  local ts
+  ts=$(date +%Y%m%d-%H%M%S)
+  if [[ -f "$file" ]]; then
+    cp "$file" "$file.$ts.bak"
+  fi
+  if have_cmd jq; then
+    local tmp
+    tmp=$(mktemp)
+    # Start with existing JSON or an empty object
+    if [[ -s "$file" ]]; then
+      cat "$file" > "$tmp"
+    else
+      echo '{}' > "$tmp"
+    fi
+    # Ensure .servers exists and upsert entry
+    local updated
+    updated=$(jq \
+      --arg name "$name" \
+      --arg cmd "$cmd" \
+      --argjson args "$args_json" \
+      --arg transport "$transport" \
+      '.servers = (.servers // {})
+       | .servers[$name] = {command: $cmd, args: $args, transport: $transport}' "$tmp")
+    echo "$updated" > "$file"
+    rm -f "$tmp"
+    echo "Updated $file → server '$name' (transport=$transport)"
+  else
+    # Fallback: write a minimal file (no merge). Warn user.
+    cat > "$file" <<JSON
+{
+  "servers": {
+    "$name": {
+      "command": "$cmd",
+      "args": $(echo "$args_json"),
+      "transport": "$transport"
+    }
+  }
+}
+JSON
+    echo "Wrote $file without merging (jq not found). Existing entries may be overwritten."
+  fi
+}
+
+configure_junie() {
+  local path="$HOME/.junie/mcp.json"
+  json_upsert_server "$path" "seev" "uvx" '["--from","git+https://github.com/bcosynot/seev.git","seev"]' "stdio"
+  JUNIE_CFG="$path"
+}
+
+configure_cursor() {
+  local path="$HOME/.cursor/mcp.json"
+  json_upsert_server "$path" "seev" "uvx" '["--from","git+https://github.com/bcosynot/seev.git","seev"]' "stdio"
+  CURSOR_CFG="$path"
+}
+
+configure_vscode() {
+  local json
+  json='{"name":"seev","command":"uvx","args":["--from","git+https://github.com/bcosynot/seev.git","seev"]}'
+  if have_cmd code; then
+    if code --version >/dev/null 2>&1; then
+      if code --add-mcp "$json" >/dev/null 2>&1; then
+        VSCODE_CFG="user-profile"
+        echo "VS Code: added Seev MCP server to user profile via --add-mcp."
+      else
+        VSCODE_INSTR="$json"
+        echo "VS Code: failed to add via CLI. Will print manual command below."
+      fi
+    fi
+  else
+    VSCODE_INSTR="$json"
+    echo "VS Code CLI ('code') not found. Will print manual command below."
+  fi
+}
+
+configure_claude() {
+  # Prefer user scope. Falls back to instructions if CLI missing.
+  local cmd=(claude mcp add --transport stdio --scope user --name seev -- uvx --from git+https://github.com/bcosynot/seev.git seev)
+  if have_cmd claude; then
+    if "${cmd[@]}" >/dev/null 2>&1; then
+      CLAUDE_CFG="user-scope"
+      echo "Claude: added Seev MCP server to user scope."
+    else
+      CLAUDE_INSTR="${cmd[*]}"
+      echo "Claude: failed to add via CLI. Will print manual command below."
+    fi
+  else
+    CLAUDE_INSTR="${cmd[*]}"
+    echo "Claude CLI not found. Will print manual command below."
+  fi
+}
+
+# Decide whether to set up MCP now
+DO_MCP=0
+if [[ ${ASSUME_YES:-0} -eq 1 ]]; then
+  DO_MCP=1
+else
+  if confirm "Also set up the Seev MCP server in your coding assistants now?"; then
+    DO_MCP=1
+  fi
+fi
+
+CONFIGURED=()
+if [[ $DO_MCP -eq 1 ]]; then
+  # Prompt for assistants (CSV of keys or names)
+  if [[ ${ASSUME_YES:-0} -eq 1 ]]; then
+    SELECTION="junie,cursor,claude,vscode"
+  else
+    echo "Select assistants to configure (comma-separated):"
+    echo "  1) Junie (JetBrains)   => 'junie'"
+    echo "  2) Cursor              => 'cursor'"
+    echo "  3) Claude Code/Desktop => 'claude'"
+    echo "  4) VS Code             => 'vscode'"
+    read -r -p "Your choice [junie,cursor,claude,vscode]: " SELECTION || true
+    SELECTION=${SELECTION:-junie,cursor,claude,vscode}
+  fi
+  # Normalize: to lowercase, split commas, map digits to names
+  norm=$(echo "$SELECTION" | tr '[:upper:]' '[:lower:]' | sed 's/[[:space:]]//g')
+  IFS=',' read -r -a items <<< "$norm"
+  # Deduplicate while preserving order
+  seen=""
+  choices=()
+  for it in "${items[@]}"; do
+    case "$it" in
+      1|junie) key="junie" ;;
+      2|cursor) key="cursor" ;;
+      3|claude|claude-code|claude-desktop) key="claude" ;;
+      4|vscode|code|visual-studio-code) key="vscode" ;;
+      *) key="" ;;
+    esac
+    if [[ -n "$key" && ",$seen," != *",$key,"* ]]; then
+      choices+=("$key"); seen="$seen,$key"
+    fi
+  done
+  for c in "${choices[@]}"; do
+    case "$c" in
+      junie) configure_junie; CONFIGURED+=("junie:$JUNIE_CFG") ;;
+      cursor) configure_cursor; CONFIGURED+=("cursor:$CURSOR_CFG") ;;
+      vscode) configure_vscode; CONFIGURED+=("vscode:$VSCODE_CFG") ;;
+      claude) configure_claude; CONFIGURED+=("claude:$CLAUDE_CFG") ;;
+    esac
+  done
+fi
+
 cat <<MSG
 
 Done!
@@ -230,13 +446,43 @@ Created or verified:
   - Database:  $DB_PATH
   - Config:    $SEEV_CONFIG_FILE
 
+MCP setup:
+$(
+  if [[ ${#CONFIGURED[@]} -gt 0 ]]; then
+    for item in "${CONFIGURED[@]}"; do
+      name="${item%%:*}"; loc="${item#*:}";
+      case "$name" in
+        junie) echo "  - Junie:    ~/.junie/mcp.json (${loc:-updated})" ;;
+        cursor) echo "  - Cursor:   ~/.cursor/mcp.json (${loc:-updated})" ;;
+        vscode) echo "  - VS Code:  user profile (code --add-mcp), status: ${loc:-attempted}" ;;
+        claude) echo "  - Claude:   user scope (claude mcp add), status: ${loc:-attempted}" ;;
+      esac
+    done
+  else
+    echo "  - Skipped (you can run this script again to add MCP configs)."
+  fi
+)
+
 Next steps:
   - You can edit $SEEV_CONFIG_FILE to adjust emails/repos.
+  - If any MCP client wasn’t auto-configured, run the corresponding manual command:
+$(
+  [[ -n "$VSCODE_INSTR" ]] && echo "    • VS Code: code --add-mcp '$VSCODE_INSTR'"
+  [[ -n "$CLAUDE_INSTR" ]] && echo "    • Claude:  $CLAUDE_INSTR"
+  true
+)
 
 Tip: You can also set env vars temporarily, e.g.:
   export SEEV_DB_PATH="$DB_PATH"
   export SEEV_MD_PATH="$MD_PATH"
   export SEEV_TRACK_EMAILS=$(echo $EMAILS_TOML | tr -d '[]' | tr -d '"')
   export SEEV_TRACK_REPOSITORIES=$(echo $REPOS_TOML | tr -d '[]' | tr -d '"')
+
+Locations reference:
+  - Junie MCP file:   ~/.junie/mcp.json
+  - Cursor MCP file:  ~/.cursor/mcp.json
+  - VS Code (CLI):    code --add-mcp '{"name":"seev","command":"uvx","args":["--from","git+https://github.com/bcosynot/seev.git","seev"]}'
+  - Claude (CLI):     claude mcp add --transport stdio --scope user --name seev -- \
+                      uvx --from git+https://github.com/bcosynot/seev.git seev
 
 MSG
