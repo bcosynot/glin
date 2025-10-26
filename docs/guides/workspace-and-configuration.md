@@ -20,6 +20,9 @@ Seev needs your git author emails to filter commits. Resolution order:
    - `~/.seev.toml`
 3. Git fallback: `git config --get user.email` then `git config --get user.name`
 
+!!! warning "Precedence gotcha"
+    The environment variable takes precedence over the config file for the current process. If values look wrong, check `SEEV_TRACK_EMAILS` first, then your `seev.toml`.
+
 ### Configure via environment
 
 ```bash
