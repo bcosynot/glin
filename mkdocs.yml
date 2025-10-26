@@ -1,11 +1,20 @@
 site_name: Seev
-site_description: "Seev documentation (Phase 1 skeleton)"
-site_url: "https://bcosynot.github.io/seev/"  # temporary
+site_description: "Seev — Your worklog, without the work."
+site_url: "https://bcosynot.github.io/seev/"
 repo_url: "https://github.com/bcosynot/seev"
 edit_uri: "edit/main/docs/"
 
 theme:
   name: material
+  logo: assets/logo.svg
+  favicon: assets/favicon.svg
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+    - scheme: slate
+      primary: indigo
+      accent: indigo
   features:
     - navigation.tabs
     - content.code.copy
@@ -19,6 +28,29 @@ plugins:
   - git-revision-date-localized:
       fallback_to_build_date: true
       strict: false
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/bcosynot/seev
+      name: GitHub
+  meta:
+    - name: "twitter:card"
+      content: "summary_large_image"
+    - property: "og:title"
+      content: "Seev — Your worklog, without the work."
+    - property: "og:description"
+      content: "Seev turns your real work—commits, PRs, and AI conversations—into a clean daily worklog."
+    - property: "og:image"
+      content: "assets/social.svg"
+    - property: "og:url"
+      content: "https://bcosynot.github.io/seev/"
+    - name: "theme-color"
+      content: "#4f46e5"
+
+extra_javascript:
+  - js/analytics.plausible.js
+  - js/schema.software.js
 
 markdown_extensions:
   - admonition

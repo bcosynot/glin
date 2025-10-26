@@ -1,3 +1,9 @@
+---
+title: "Seev — Your worklog, without the work"
+description: "Seev turns your real work—commits, PRs, and AI conversations—into a clean daily worklog. No copy‑pasting. No end‑of‑day scramble."
+social_image: assets/social.svg
+---
+
 # Seev
 
 Your worklog, without the work.
