@@ -33,19 +33,23 @@ except Exception:  # pragma: no cover - optional
 
 
 try:
-    from .git_tools.commits import get_commits_by_date
+    from .git_tools.commits import get_commits_by_date  # type: ignore[assignment]
 except Exception:  # pragma: no cover
 
-    def get_commits_by_date(since: str, until: str = "now") -> list[dict]:  # type: ignore
+    def _fallback_get_commits_by_date(since: str, until: str = "now") -> list[dict]:
         return []
+
+    get_commits_by_date = _fallback_get_commits_by_date  # type: ignore[assignment]
 
 
 try:
-    from .storage.conversations import query_conversations
+    from .storage.conversations import query_conversations  # type: ignore[assignment]
 except Exception:  # pragma: no cover
 
-    def query_conversations(filters: dict[str, Any]) -> list[dict]:  # type: ignore
+    def _fallback_query_conversations(filters: dict[str, Any]) -> list[dict]:
         return []
+
+    query_conversations = _fallback_query_conversations  # type: ignore[assignment]
 
 
 class GenerateWorklogMetadata(TypedDict, total=False):
