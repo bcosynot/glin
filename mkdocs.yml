@@ -22,6 +22,7 @@ plugins:
 
 markdown_extensions:
   - admonition
+  - attr_list
   - toc:
       permalink: true
   - pymdownx.highlight
@@ -40,5 +41,9 @@ nav:
       - MCP Clients: guides/mcp-clients.md
   - Reference:
       - Reference Home: reference/index.md
+      - MCP Tools: reference/mcp-tools.md
+      - Prompts: reference/prompts.md
   - Troubleshooting: troubleshooting.md
+  - Privacy & Data: privacy-and-data.md
+  - Contributing: contributing.md
   - Changelog: changelog.md
