@@ -42,7 +42,7 @@ def test_default_no_db_autowrite(monkeypatch, tmp_path):
 
     monkeypatch.setattr(storage_commits, "bulk_upsert_commits", fake_bulk_upsert)
 
-    from glin.git_tools.commits import get_recent_commits
+    from seev.git_tools.commits import get_recent_commits
 
     out = get_recent_commits(count=1)
     assert isinstance(out, list) and len(out) == 1
@@ -75,8 +75,8 @@ def test_db_autowrite_enabled(monkeypatch, tmp_path):
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    from glin.git_tools.commits import get_recent_commits
-    from glin.storage import commits as sc, db as sdb
+    from seev.git_tools.commits import get_recent_commits
+    from seev.storage import commits as sc, db as sdb
 
     # Ensure DB exists
     sdb.init_db(str(db_file))

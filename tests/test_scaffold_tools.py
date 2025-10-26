@@ -42,8 +42,8 @@ def test_creates_new_workspace(monkeypatch, tmp_path: Path) -> None:
         calls["status"] += 1
         return {"schema_version": 2, "ok": True}
 
-    monkeypatch.setattr("glin.scaffold_tools.init_db", fake_init_db)
-    monkeypatch.setattr("glin.scaffold_tools.get_db_status", fake_get_db_status)
+    monkeypatch.setattr("seev.scaffold_tools.init_db", fake_init_db)
+    monkeypatch.setattr("seev.scaffold_tools.get_db_status", fake_get_db_status)
 
     res = asyncio.run(init_glin.fn(str(base)))
 
@@ -109,8 +109,8 @@ def test_already_initialized_reports_status(monkeypatch, tmp_path: Path) -> None
         init_called["count"] += 1
         return 3
 
-    monkeypatch.setattr("glin.scaffold_tools.get_db_status", fake_get_db_status)
-    monkeypatch.setattr("glin.scaffold_tools.init_db", fake_init_db)
+    monkeypatch.setattr("seev.scaffold_tools.get_db_status", fake_get_db_status)
+    monkeypatch.setattr("seev.scaffold_tools.init_db", fake_init_db)
 
     res = asyncio.run(init_glin.fn(str(base)))
 
@@ -136,7 +136,7 @@ def test_already_initialized_when_status_raises_sets_none(monkeypatch, tmp_path:
     def boom(path: str | None = None) -> dict[str, Any]:  # type: ignore[override]
         raise RuntimeError("oops")
 
-    monkeypatch.setattr("glin.scaffold_tools.get_db_status", boom)
+    monkeypatch.setattr("seev.scaffold_tools.get_db_status", boom)
 
     res = asyncio.run(init_glin.fn(str(base)))
 
@@ -152,9 +152,9 @@ def test_relative_path_is_resolved_against_cwd(monkeypatch, tmp_path: Path) -> N
     rel = Path("rel_dir")
 
     # Mock DB functions to avoid real work
-    monkeypatch.setattr("glin.scaffold_tools.init_db", lambda p=None: 1)
+    monkeypatch.setattr("seev.scaffold_tools.init_db", lambda p=None: 1)
     monkeypatch.setattr(
-        "glin.scaffold_tools.get_db_status", lambda p=None: {"schema_version": 1, "ok": True}
+        "seev.scaffold_tools.get_db_status", lambda p=None: {"schema_version": 1, "ok": True}
     )
 
     res = asyncio.run(init_glin.fn(str(rel)))

@@ -21,8 +21,8 @@ class TestGetTrackedEmails:
         monkeypatch.setenv("GLIN_TRACK_EMAILS", "env@example.com,env2@example.com")
 
         # Mock other sources to ensure they're not used
-        with patch("glin.config._get_config_file_emails", return_value=["file@example.com"]):
-            with patch("glin.config._get_git_author_pattern", return_value="git@example.com"):
+        with patch("seev.config._get_config_file_emails", return_value=["file@example.com"]):
+            with patch("seev.config._get_git_author_pattern", return_value="git@example.com"):
                 emails = get_tracked_emails()
                 assert emails == ["env@example.com", "env2@example.com"]
 
@@ -30,8 +30,8 @@ class TestGetTrackedEmails:
         """Config file should be used when env variable is not set."""
         monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
 
-        with patch("glin.config._get_config_file_emails", return_value=["file@example.com"]):
-            with patch("glin.config._get_git_author_pattern", return_value="git@example.com"):
+        with patch("seev.config._get_config_file_emails", return_value=["file@example.com"]):
+            with patch("seev.config._get_git_author_pattern", return_value="git@example.com"):
                 emails = get_tracked_emails()
                 assert emails == ["file@example.com"]
 
@@ -39,8 +39,8 @@ class TestGetTrackedEmails:
         """Git config should be used when env and config file are not available."""
         monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
 
-        with patch("glin.config._get_config_file_emails", return_value=[]):
-            with patch("glin.config._get_git_author_pattern", return_value="git@example.com"):
+        with patch("seev.config._get_config_file_emails", return_value=[]):
+            with patch("seev.config._get_git_author_pattern", return_value="git@example.com"):
                 emails = get_tracked_emails()
                 assert emails == ["git@example.com"]
 
@@ -48,8 +48,8 @@ class TestGetTrackedEmails:
         """Should return empty list when no configuration is found."""
         monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
 
-        with patch("glin.config._get_config_file_emails", return_value=[]):
-            with patch("glin.config._get_git_author_pattern", return_value=None):
+        with patch("seev.config._get_config_file_emails", return_value=[]):
+            with patch("seev.config._get_git_author_pattern", return_value=None):
                 emails = get_tracked_emails()
                 assert emails == []
 

@@ -50,7 +50,7 @@ def test_get_author_filters_from_config(monkeypatch):
     from unittest.mock import patch
 
     with patch(
-        "glin.git_tools.get_tracked_emails", return_value=["user1@example.com", "user2@example.com"]
+        "seev.git_tools.get_tracked_emails", return_value=["user1@example.com", "user2@example.com"]
     ):
         filters = _get_author_filters()
         assert filters == ["user1@example.com", "user2@example.com"]
@@ -60,7 +60,7 @@ def test_get_author_filters_empty_when_no_config(monkeypatch):
     """Test that _get_author_filters returns empty list when no config."""
     from unittest.mock import patch
 
-    with patch("glin.git_tools.get_tracked_emails", return_value=[]):
+    with patch("seev.git_tools.get_tracked_emails", return_value=[]):
         filters = _get_author_filters()
         assert filters == []
 
@@ -76,7 +76,7 @@ def test_get_recent_commits_parses_output(monkeypatch):
         )
     )
 
-    with patch("glin.git_tools.get_tracked_emails", return_value=["me@example.com"]):
+    with patch("seev.git_tools.get_tracked_emails", return_value=["me@example.com"]):
         monkeypatch.setattr(
             subprocess,
             "run",
@@ -96,7 +96,7 @@ def test_get_recent_commits_parses_output(monkeypatch):
 def test_get_recent_commits_no_author_config(monkeypatch):
     from unittest.mock import patch
 
-    with patch("glin.git_tools.get_tracked_emails", return_value=[]):
+    with patch("seev.git_tools.get_tracked_emails", return_value=[]):
         res = get_recent_commits(1)
         assert res and "error" in res[0]
         assert "No email addresses configured" in res[0]["error"]
@@ -113,7 +113,7 @@ def test_get_commits_by_date_parses_and_empty_info(monkeypatch):
     )
 
     # Empty result case
-    with patch("glin.git_tools.get_tracked_emails", return_value=["me@example.com"]):
+    with patch("seev.git_tools.get_tracked_emails", return_value=["me@example.com"]):
         monkeypatch.setattr(
             subprocess,
             "run",
@@ -150,7 +150,7 @@ def test_get_commits_handles_subprocess_error(monkeypatch):
         128, ["git", "log"], output="", stderr="fatal: bad stuff"
     )
 
-    with patch("glin.git_tools.get_tracked_emails", return_value=["me@example.com"]):
+    with patch("seev.git_tools.get_tracked_emails", return_value=["me@example.com"]):
         monkeypatch.setattr(
             subprocess,
             "run",
@@ -172,7 +172,7 @@ def test_get_recent_commits_handles_general_exception(monkeypatch):
     def failing_run(*args, **kwargs):
         raise RuntimeError("Something went wrong")
 
-    with patch("glin.git_tools.get_tracked_emails", return_value=["me@example.com"]):
+    with patch("seev.git_tools.get_tracked_emails", return_value=["me@example.com"]):
         monkeypatch.setattr(subprocess, "run", failing_run)
 
         res = get_recent_commits(3)
@@ -188,7 +188,7 @@ def test_get_commits_by_date_handles_subprocess_error(monkeypatch):
         128, ["git", "log"], output="", stderr="fatal: bad stuff"
     )
 
-    with patch("glin.git_tools.get_tracked_emails", return_value=["me@example.com"]):
+    with patch("seev.git_tools.get_tracked_emails", return_value=["me@example.com"]):
         monkeypatch.setattr(
             subprocess,
             "run",
@@ -210,7 +210,7 @@ def test_get_commits_by_date_handles_general_exception(monkeypatch):
     def failing_run(*args, **kwargs):
         raise RuntimeError("Something went wrong")
 
-    with patch("glin.git_tools.get_tracked_emails", return_value=["me@example.com"]):
+    with patch("seev.git_tools.get_tracked_emails", return_value=["me@example.com"]):
         monkeypatch.setattr(subprocess, "run", failing_run)
 
         res = get_commits_by_date("yesterday", "now")
@@ -221,7 +221,7 @@ def test_get_commits_by_date_handles_general_exception(monkeypatch):
 def test_get_commits_by_date_no_author_config(monkeypatch):
     from unittest.mock import patch
 
-    with patch("glin.git_tools.get_tracked_emails", return_value=[]):
+    with patch("seev.git_tools.get_tracked_emails", return_value=[]):
         res = get_commits_by_date("yesterday", "now")
         assert res and "error" in res[0]
         assert "No email addresses configured" in res[0]["error"]
@@ -232,9 +232,9 @@ def test_get_tracked_email_config():
     from unittest.mock import patch
 
     with patch(
-        "glin.git_tools.get_tracked_emails", return_value=["user1@example.com", "user2@example.com"]
+        "seev.git_tools.get_tracked_emails", return_value=["user1@example.com", "user2@example.com"]
     ):
-        with patch("glin.git_tools._get_config_source", return_value="environment_variable"):
+        with patch("seev.git_tools._get_config_source", return_value="environment_variable"):
             config = get_tracked_email_config()
             assert config["tracked_emails"] == ["user1@example.com", "user2@example.com"]
             assert config["count"] == 2
@@ -262,7 +262,7 @@ def test_configure_tracked_emails_file():
 
     with tempfile.TemporaryDirectory() as tmpdir:
         expected_path = Path(tmpdir) / "glin.toml"
-        with patch("glin.git_tools.create_config_file", return_value=expected_path) as mock_create:
+        with patch("seev.git_tools.create_config_file", return_value=expected_path) as mock_create:
             result = configure_tracked_emails(emails, method="file")
 
             assert result["success"] is True
@@ -287,7 +287,7 @@ def test_configure_tracked_emails_exception_handling(monkeypatch):
     emails = ["test@example.com"]
 
     # Mock set_tracked_emails_env to raise an exception
-    with patch("glin.git_tools.set_tracked_emails_env", side_effect=RuntimeError("Test error")):
+    with patch("seev.git_tools.set_tracked_emails_env", side_effect=RuntimeError("Test error")):
         result = configure_tracked_emails(emails, method="env")
 
         assert result["success"] is False
@@ -375,7 +375,7 @@ def test_get_commit_diff_with_workdir(monkeypatch):
     """Diff should execute with '-C <root>' when workdir provided."""
     import subprocess
 
-    monkeypatch.setattr("glin.git_tools.diffs.resolve_repo_root", lambda p: {"path": "/repo"})
+    monkeypatch.setattr("seev.git_tools.diffs.resolve_repo_root", lambda p: {"path": "/repo"})
 
     metadata_output = Completed(
         stdout=(
@@ -397,7 +397,7 @@ def test_get_commit_diff_with_workdir(monkeypatch):
         ),
     )
 
-    from glin.git_tools.diffs import get_commit_diff as _gcd
+    from seev.git_tools.diffs import get_commit_diff as _gcd
 
     result = _gcd("abc123", workdir="/work/here")
     assert result["hash"] == "abc123"
@@ -656,7 +656,7 @@ def test_get_commit_files_with_workdir(monkeypatch):
     import subprocess
 
     # Resolve workdir -> repo root
-    monkeypatch.setattr("glin.git_tools.files.resolve_repo_root", lambda p: {"path": "/repo"})
+    monkeypatch.setattr("seev.git_tools.files.resolve_repo_root", lambda p: {"path": "/repo"})
 
     metadata_output = Completed(
         stdout="abc123|Alice|alice@example.com|2024-01-01 12:00:00 +0000|msg"
@@ -676,7 +676,7 @@ def test_get_commit_files_with_workdir(monkeypatch):
         ),
     )
 
-    from glin.git_tools.files import get_commit_files as _gcf
+    from seev.git_tools.files import get_commit_files as _gcf
 
     result = _gcf("abc123", workdir="/work/here")
     assert result["hash"] == "abc123"
@@ -1086,7 +1086,7 @@ def test_get_commits_by_date_normalizes_single_iso_date(monkeypatch):
     # Expectation: since=2025-10-10, until=2025-10-11 when input is since="2025-10-11"
     log_empty = Completed(stdout="\n")
 
-    with patch("glin.git_tools.get_tracked_emails", return_value=["me@example.com"]):
+    with patch("seev.git_tools.get_tracked_emails", return_value=["me@example.com"]):
         monkeypatch.setattr(
             subprocess,
             "run",
@@ -1115,7 +1115,7 @@ def test_get_commits_by_date_no_normalize_with_explicit_until(monkeypatch):
 
     log_empty = Completed(stdout="\n")
 
-    with patch("glin.git_tools.get_tracked_emails", return_value=["me@example.com"]):
+    with patch("seev.git_tools.get_tracked_emails", return_value=["me@example.com"]):
         monkeypatch.setattr(
             subprocess,
             "run",
