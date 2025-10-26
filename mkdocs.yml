@@ -33,5 +33,9 @@ nav:
       - Guides Home: guides/index.md
   - Reference:
       - Reference Home: reference/index.md
+      - MCP Tools: reference/mcp-tools.md
+      - Prompts: reference/prompts.md
   - Troubleshooting: troubleshooting.md
+  - Privacy & Data: privacy-and-data.md
+  - Contributing: contributing.md
   - Changelog: changelog.md

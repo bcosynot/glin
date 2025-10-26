@@ -88,7 +88,7 @@ from . import (
     markdown_tools as _markdown_tools,  # noqa: F401
     prompts as _prompts,  # noqa: F401
     scaffold_tools as _scaffold_tools,  # noqa: F401  # register workspace scaffold tool
-    worklog_generator as _worklog_generator,  # noqa: F401  # register rich worklog tool
+    # worklog_generator import is intentionally deferred to avoid heavy imports during docs build
 )
 
 # Import storage tools (commit-conversation links) to register their MCP tools
