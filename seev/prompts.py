@@ -8,6 +8,7 @@ Clients can discover these with `list_prompts()` and render with
 `get_prompt(name, args)` when using a FastMCP client.
 """
 
+from datetime import date as _date
 from typing import Annotated, TypedDict
 
 from fastmcp.utilities.logging import get_logger  # type: ignore
@@ -205,4 +206,101 @@ async def worklog_entry_prompt(
         {"role": "user", "content": user},
     ]
     log.info("worklog_entry: rendered", extra={"messages": len(msgs)})
+    return msgs
+
+
+@mcp.prompt(
+    name="conversation_summary",
+    description=(
+        "Create a concise summary of the current task or conversation for a given date, then persist it by calling "
+        "the 'record_conversation_summary' MCP tool with the appropriate parameters."
+    ),
+    tags=["conversation", "summary", "logging"],
+)
+async def conversation_summary_prompt(
+    date: Annotated[
+        str,
+        Field(
+            description=(
+                "Target ISO calendar date (YYYY-MM-DD). If omitted or blank, defaults to today's local date."
+            )
+        ),
+    ] = "",
+    title: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Optional title when creating a new conversation. If not provided and no conversation_id is supplied, "
+                "derive a short title from the first sentence of the summary (<= 80 chars, no newlines)."
+            )
+        ),
+    ] = None,
+    conversation_id: Annotated[
+        int | None,
+        Field(
+            description="Existing conversation id to append to; if null, a new conversation will be created."
+        ),
+    ] = None,
+    inputs: Annotated[
+        str,
+        Field(
+            description=(
+                "Notes, highlights, or the raw text to base the summary on. Markdown allowed; keep it concise."
+            )
+        ),
+    ] = "",
+) -> list[dict[str, str]]:
+    """Render a prompt that guides the LLM to summarize and persist a conversation summary.
+
+    The LLM should compose a brief summary (3–8 bullets or 3–6 short sentences) that captures goals, key
+    decisions, outcomes, and next steps. Then it must call 'record_conversation_summary' with the resolved
+    parameters.
+    """
+    if inputs is None:
+        inputs = ""
+    # Resolve default date on the server so the LLM doesn't have to guess today's date
+    resolved_date = (date or "").strip() or _date.today().isoformat()
+    log.info(
+        "conversation_summary: rendering",
+        extra={
+            "date_len": len(resolved_date),
+            "has_title": bool(title),
+            "has_conversation_id": conversation_id is not None,
+            "inputs_len": len(inputs),
+        },
+    )
+    system = _system_header(
+        "Summarize a conversation and persist it via record_conversation_summary"
+    )
+    # Provide explicit call contract so tool-using LLMs behave deterministically
+    user = (
+        "Create a concise summary for the conversation/task and then immediately persist it using the "
+        "'record_conversation_summary' tool. Follow this workflow:\n\n"
+        "1) Write the summary:\n"
+        "   - Keep it brief and concrete.\n"
+        "   - Prefer bullets; short paragraphs are fine.\n"
+        "   - Include concrete ISO dates when mentioned.\n"
+        "   - Emphasize goals, key decisions (with rationale), outcomes, blockers, and next steps.\n\n"
+        "2) Persist the summary by calling the tool with EXACTLY these parameters:\n"
+        f"   • date = {resolved_date} (ISO YYYY-MM-DD; resolved by the server)\n"
+        "   • summary = the text you just wrote (do not wrap in code fences)\n"
+        f"   • conversation_id = {conversation_id if conversation_id is not None else 'null'}\n"
+        + (
+            f"   • title = {title!r} (use as provided)\n"
+            if title
+            else "   • title = null (if conversation_id is null, generate a short title summarizing the conversation; <= 80 chars, no newlines)\n"
+        )
+        + "\nRules:\n"
+        "- Make exactly one tool call.\n"
+        "- If conversation_id is provided, ignore title derivation.\n"
+        "- If both conversation_id and title are null, derive the title as instructed.\n"
+        "- Do not include the tool call parameters in the summary text itself.\n"
+    )
+    if inputs:
+        user += f"\n\n<INPUTS>\n{inputs}\n</INPUTS>"
+    msgs = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user},
+    ]
+    log.info("conversation_summary: rendered", extra={"messages": len(msgs)})
     return msgs
