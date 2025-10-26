@@ -28,7 +28,39 @@ No manual logging. No "what did I even do today?" moments. Seev captures your fl
 
 ## Quick Start
 
-### 1. Add Seev to Your AI Coding Assistant
+#### 1. Initialize via shell script
+
+```bash
+# Replace <OWNER>/<REPO> with your GitHub org/repo (branch: main)
+curl -fsSL https://raw.githubusercontent.com/bcosynot/seev/main/seev-init.sh | bash -s -- -y ~/seev-workspace
+```
+
+Examples with options:
+
+```bash
+# Specify emails and repositories to track
+curl -fsSL https://raw.githubusercontent.com/bcosynot/seev/main/seev-init.sh \
+  | bash -s -- -y \
+      -e "me@ex.com,me@work.com" \
+      -r "owner/repo,~/code/another-repo" \
+      -m WORKLOG.md -d seev.sqlite3 \
+      ~/seev-workspace
+```
+
+What the script does:
+- Creates the target directory (e.g., `~/seev-workspace`) if needed
+- Writes `WORKLOG.md` and `seev.sqlite3` (customizable via `-m`/`-d`)
+- Generates/updates `~/.config/seev/seev.toml` (backs up existing with a timestamp)
+- Respects env overrides at runtime: `SEEV_DB_PATH`, `SEEV_MD_PATH`, `SEEV_TRACK_EMAILS`, `SEEV_TRACK_REPOSITORIES`
+
+Security tips:
+- Always inspect scripts before piping to `bash`:
+    - `curl -fsSL https://raw.githubusercontent.com/<OWNER>/<REPO>/main/seev-init.sh -o /tmp/seev-init.sh && less /tmp/seev-init.sh`
+    - `bash /tmp/seev-init.sh -h` to view help
+- The script supports interactive prompts by default; use `-y` to accept defaults.
+
+
+### 2. Add Seev to Your AI Coding Assistant
 
 Seev works with any MCP-compatible client. Here's how to set it up:
 
@@ -44,7 +76,7 @@ Add to your Claude Desktop config file:
   "mcpServers": {
     "seev": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/yourusername/seev.git", "seev"]
+      "args": ["--from", "git+https://github.com/bcosynot/seev.git", "seev"]
     }
   }
 }
@@ -62,7 +94,7 @@ Add to Cursor's MCP settings file:
   "mcpServers": {
     "seev": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/yourusername/seev.git", "seev"]
+      "args": ["--from", "git+https://github.com/bcosynot/seev.git", "seev"]
     }
   }
 }
@@ -77,45 +109,13 @@ Add to Cline's MCP settings in VS Code settings:
   "cline.mcpServers": {
     "seev": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/yourusername/seev.git", "seev"]
-    }
-  }
-}
-```
-
-#### Local Development Setup
-
-If you're developing or want to run from a local clone:
-
-```json
-{
-  "mcpServers": {
-    "seev": {
-      "command": "uv",
-      "args": ["run", "--directory", "/path/to/seev", "python", "main.py"]
+      "args": ["--from", "git+https://github.com/bcosynot/seev.git", "seev"]
     }
   }
 }
 ```
 
 **Note**: After updating your config, restart your AI assistant to load the Seev MCP server.
-
----
-
-### 2. Initialize Your Workspace
-
-Once Seev is connected to your AI assistant, initialize a workspace to store your worklog:
-
-**Ask your AI assistant:**
-
-> "Use the init_seev tool to create a workspace at ~/seev-workspace"
-
-**What happens:**
-- Creates `WORKLOG.md` for your entries
-- Sets up `db.sqlite3` for tracking commits and conversations
-- Generates `~/.config/seev/seev.toml` with paths configured
-
-If the workspace already exists, Seev will confirm it's ready without modifying files.
 
 ---
 
@@ -274,9 +274,6 @@ No additional configuration needed — Seev detects and uses the GitHub MCP when
 
 Seev provides these MCP tools for your AI assistant:
 
-### Workspace Management
-- **`init_seev`**: Initialize a workspace with WORKLOG.md, database, and config
-
 ### Git Tools
 - **`get_commits_by_date`**: Fetch commits for a date range
 - **`get_recent_commits`**: Get recent commits (default: last 10)
@@ -293,11 +290,6 @@ Seev provides these MCP tools for your AI assistant:
 
 ### Worklog Generation
 - **`append_to_markdown`**: Add content to WORKLOG.md under a date heading
-- **`generate_rich_worklog`**: Create structured worklog with all sections
-
-### Configuration
-- **`get_tracked_email_config`**: View current email tracking config
-- **`configure_tracked_emails`**: Set tracked emails via env or file
 
 ---
 
