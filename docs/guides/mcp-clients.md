@@ -65,7 +65,7 @@ Configure Seev with your preferred MCP‑compatible client. Use the tab for your
 - Ask it to run a simple tool, e.g.:
 
 ```text
-/get_tracked_email_config
+use seev to get the last 10 commits
 ```
 
 Expected: a configuration snapshot including where tracked emails came from.
