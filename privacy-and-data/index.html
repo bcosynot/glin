@@ -94,7 +94,8 @@
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href=".." title="Seev" class="md-header__button md-logo" aria-label="Seev" data-md-component="logo">
       
-  <img src="../assets/logo.svg" alt="logo">
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -326,25 +327,6 @@
   
 
       
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../changelog/" class="md-tabs__link">
-        
-  
-  
-    
-  
-  Changelog
-
-      </a>
-    </li>
-  
-
-      
     </ul>
   </div>
 </nav>
@@ -369,7 +351,8 @@
   <label class="md-nav__title" for="__drawer">
     <a href=".." title="Seev" class="md-nav__button md-logo" aria-label="Seev" data-md-component="logo">
       
-  <img src="../assets/logo.svg" alt="logo">
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
     Seev
@@ -770,15 +753,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#logging-controls" class="md-nav__link">
-    <span class="md-ellipsis">
-      Logging controls
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#worklog-location" class="md-nav__link">
     <span class="md-ellipsis">
       Worklog location
@@ -814,15 +788,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#optional-analytics-docs-site" class="md-nav__link">
-    <span class="md-ellipsis">
-      Optional analytics (docs site)
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -844,28 +809,6 @@
   
   <span class="md-ellipsis">
     Contributing
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../changelog/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Changelog
     
   </span>
   
@@ -902,15 +845,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#logging-controls" class="md-nav__link">
-    <span class="md-ellipsis">
-      Logging controls
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#worklog-location" class="md-nav__link">
     <span class="md-ellipsis">
       Worklog location
@@ -946,15 +880,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#optional-analytics-docs-site" class="md-nav__link">
-    <span class="md-ellipsis">
-      Optional analytics (docs site)
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -983,23 +908,8 @@
 <p>Seev is designed with local-first principles:</p>
 <ul>
 <li>Local storage by default: Conversations and worklog files are stored on your machine. Git data is read from your local repositories unless you explicitly connect remote services via other MCP servers.</li>
-<li>Minimal logging: By default, only console logs are emitted. You can opt into file logging via environment variables (see below).</li>
 <li>No telemetry: The project does not send usage data.</li>
 </ul>
-<h2 id="logging-controls">Logging controls<a class="headerlink" href="#logging-controls" title="Permanent link">&para;</a></h2>
-<p>Seev can write server-side logs when running the MCP server. Configure via environment variables before start (seev.mcp_app.run reads these):</p>
-<ul>
-<li>SEEV_LOG_PATH: File path for log output. When set, a file handler is attached (parents are created as needed).</li>
-<li>SEEV_LOG_LEVEL: DEBUG, INFO, WARNING, ERROR. Default: INFO.</li>
-<li>SEEV_LOG_STDERR: If truthy (default 1), keep a stderr stream handler.</li>
-<li>SEEV_LOG_ROTATE: If truthy (default 1), rotate logs instead of a single growing file.</li>
-<li>SEEV_LOG_MAX_BYTES: Max size per rotated file (default ~5MB).</li>
-<li>SEEV_LOG_BACKUPS: Number of rotated backups to keep (default 3).</li>
-</ul>
-<p>Example:</p>
-<div class="highlight"><pre><span></span><code>export SEEV_LOG_PATH=&quot;$HOME/.local/state/seev/seev.log&quot;
-export SEEV_LOG_LEVEL=DEBUG
-</code></pre></div>
 <h2 id="worklog-location">Worklog location<a class="headerlink" href="#worklog-location" title="Permanent link">&para;</a></h2>
 <p>The markdown worklog file path is resolved by <code>seev.config.get_markdown_path()</code>:
 - Default: <code>./WORKLOG.md</code> in the current working directory.
@@ -1019,30 +929,6 @@ export SEEV_LOG_LEVEL=DEBUG
 </ul>
 <h2 id="external-services">External services<a class="headerlink" href="#external-services" title="Permanent link">&para;</a></h2>
 <p>Seev itself does not call remote APIs. If you run your agent with additional MCP servers (e.g., GitHub), those servers have their own privacy characteristics. Review their docs and configure credentials carefully.</p>
-<h2 id="optional-analytics-docs-site">Optional analytics (docs site)<a class="headerlink" href="#optional-analytics-docs-site" title="Permanent link">&para;</a></h2>
-<p>The published documentation site can optionally use <a href="https://plausible.io/">Plausible Analytics</a>, a lightweight, privacy‑friendly analytics tool. This is disabled by default and ships as opt‑in.</p>
-<p>What ships by default
-- The site includes a tiny loader at <code>docs/js/analytics.plausible.js</code> that does nothing unless explicitly enabled.
-- No third‑party requests are made without your action.</p>
-<p>How to enable (docs maintainers)
-1) Edit <code>mkdocs.yml</code> and add a Plausible domain meta tag under <code>extra.meta</code>:
-   <div class="highlight"><pre><span></span><code><span class="nt">extra</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">meta</span><span class="p">:</span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;plausible:domain&quot;</span>
-<span class="w">      </span><span class="nt">content</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;docs.example.com&quot;</span><span class="w">  </span><span class="c1"># your docs domain</span>
-</code></pre></div>
-2) (Recommended) Add an SRI hash for Plausible’s script to enforce Subresource Integrity. Note that Plausible occasionally updates the script; you must refresh this hash when upgrading.
-   <div class="highlight"><pre><span></span><code><span class="nt">extra</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">meta</span><span class="p">:</span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;plausible:sri&quot;</span>
-<span class="w">      </span><span class="nt">content</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;sha384-REPLACE_WITH_VALID_HASH&quot;</span>
-</code></pre></div>
-3) Rebuild the site: <code>uv run mkdocs build --strict</code>.</p>
-<p>How it works
-- On page load, the loader looks for <code>meta[name="plausible:domain"]</code>. If found, it injects the official <code>https://plausible.io/js/script.js</code> with <code>defer</code> and <code>crossorigin="anonymous"</code>. If an SRI meta is present, it sets <code>integrity</code> accordingly.
-- If the meta is absent (default in this repo), analytics remains OFF.</p>
-<p>Data policy
-- Plausible does not use cookies and does not collect PII. See their published policy for details.</p>
 
 
 
@@ -1063,7 +949,7 @@ export SEEV_LOG_LEVEL=DEBUG
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 26, 2025 21:31:44 UTC">October 26, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 26, 2025 22:01:59 UTC">October 26, 2025</span>
   </span>
 
     
