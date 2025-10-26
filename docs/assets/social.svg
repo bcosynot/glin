@@ -20,7 +20,7 @@
     <rect width="1000" height="330" rx="24" fill="#0b1020" opacity="0.8" filter="url(#shadow)"/>
     <text x="50" y="125" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="120" font-weight="800" fill="url(#accent)">Seev</text>
     <text x="50" y="205" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="44" fill="#e2e8f0">Your worklog, without the work.</text>
-    <text x="50" y="265" font-family="ui-monospace,SFMono-Regular,Consolas,Menlo,monospace" font-size="28" fill="#a5b4fc">uv run mkdocs build --strict</text>
+    <text x="50" y="265" font-family="ui-monospace,SFMono-Regular,Consolas,Menlo,monospace" font-size="28" fill="#a5b4fc">uvx --from git+https://github.com/bcosynot/seev.git seev</text>
   </g>
   <circle cx="1080" cy="540" r="36" fill="url(#accent)"/>
 </svg>
