@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Seev Social Preview</title>
+  <desc id="desc">Social card used for Open Graph and Twitter</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <g transform="translate(100,150)">
+    <rect width="1000" height="330" rx="24" fill="#0b1020" opacity="0.8" filter="url(#shadow)"/>
+    <text x="50" y="125" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="120" font-weight="800" fill="url(#accent)">Seev</text>
+    <text x="50" y="205" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="44" fill="#e2e8f0">Your worklog, without the work.</text>
+    <text x="50" y="265" font-family="ui-monospace,SFMono-Regular,Consolas,Menlo,monospace" font-size="28" fill="#a5b4fc">uvx --from git+https://github.com/bcosynot/seev.git seev</text>
+  </g>
+  <circle cx="1080" cy="540" r="36" fill="url(#accent)"/>
+</svg>
