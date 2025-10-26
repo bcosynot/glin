@@ -43,7 +43,7 @@ def _get_config_source() -> str:
     import os
     from pathlib import Path
 
-    if os.getenv("SEEV_TRACK_EMAILS") or os.getenv("GLIN_TRACK_EMAILS"):
+    if os.getenv("SEEV_TRACK_EMAILS"):
         return "environment_variable"
 
     config_paths = [
@@ -69,12 +69,7 @@ def _get_repositories_config_source() -> str:
     import os
     from pathlib import Path
 
-    if (
-        os.getenv("SEEV_TRACK_REPOSITORIES")
-        or os.getenv("SEEV_TRACK_REPOS")
-        or os.getenv("GLIN_TRACK_REPOSITORIES")
-        or os.getenv("GLIN_TRACK_REPOS")
-    ):
+    if os.getenv("SEEV_TRACK_REPOSITORIES") or os.getenv("SEEV_TRACK_REPOS"):
         return "environment_variable"
 
     config_paths = [
@@ -118,7 +113,7 @@ def configure_tracked_emails(
             git_tools.set_tracked_emails_env(emails)
             return {
                 "success": True,
-                "message": f"Set SEEV_TRACK_EMAILS environment variable with {len(emails)} emails (legacy GLIN_* supported)",
+                "message": f"Set SEEV_TRACK_EMAILS environment variable with {len(emails)} emails",
                 "emails": emails,
                 "method": "environment_variable",
                 "config_path": None,
@@ -168,7 +163,7 @@ def _tool_get_tracked_repositories_config() -> RepositoriesConfig:  # pragma: no
     name="configure_tracked_emails",
     description=(
         "Configure email addresses to track commits from. Supports two methods: 'env' to set the "
-        "SEEV_TRACK_EMAILS environment variable (legacy GLIN_* supported), or 'file' to create a seev.toml configuration file (legacy glin.toml supported)."
+        "SEEV_TRACK_EMAILS environment variable, or 'file' to create a seev.toml configuration file (with glin.toml fallback support)."
     ),
 )
 def _tool_configure_tracked_emails(

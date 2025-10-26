@@ -163,7 +163,7 @@ async def worklog_entry_prompt(
         "  • content = the date-specific markdown block with h3 sub-headings and bullets\n"
         "  • preserve_lines = true (so lines are written as-is without auto-bullets)\n"
         "  • update_mode = true (IMPORTANT: merge with existing entry if present; do not create duplicates)\n"
-        "  • file_path can be omitted (defaults to GLIN_MD_PATH or ./WORKLOG.md).\n"
+        "  • file_path can be omitted (defaults to SEEV_MD_PATH or ./WORKLOG.md).\n"
         f"  • Target worklog file path resolved now: {md_path}.\n"
         "- Make exactly one tool call per date with just that date's content. Do not batch multiple dates in one call.\n"
         "- The update_mode flag ensures that if an entry for date D already exists, the new content will be intelligently merged with the existing sections rather than appended, preventing duplicates.\n\n"

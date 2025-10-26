@@ -102,17 +102,15 @@ def _truthy(val: str | None) -> bool:
 def _configure_logging_from_env() -> None:
     """Configure server-side logging based on environment variables.
 
-    Env vars (preferred):
+    Env vars:
       - SEEV_LOG_PATH: File path for log output. If set, a file handler is attached.
       - SEEV_LOG_LEVEL: Logging level (DEBUG, INFO, WARNING, ERROR). Default: INFO.
       - SEEV_LOG_STDERR: If truthy (default), keep a stderr StreamHandler; set to 0 to disable.
       - SEEV_LOG_ROTATE: If truthy (default), use RotatingFileHandler; else plain FileHandler.
       - SEEV_LOG_MAX_BYTES: Max size per log file in bytes when rotating. Default: 5_242_880 (~5MB).
       - SEEV_LOG_BACKUPS: Number of rotated backups to keep. Default: 3.
-
-    Legacy GLIN_LOG_* variables are still supported if SEEV_LOG_* are not set.
     """
-    path = os.getenv("SEEV_LOG_PATH") or os.getenv("GLIN_LOG_PATH")
+    path = os.getenv("SEEV_LOG_PATH")
     if not path:
         return
 
@@ -120,7 +118,7 @@ def _configure_logging_from_env() -> None:
         p = Path(os.path.expanduser(path))
         p.parent.mkdir(parents=True, exist_ok=True)
 
-        level_name = (os.getenv("SEEV_LOG_LEVEL") or os.getenv("GLIN_LOG_LEVEL") or "INFO").upper()
+        level_name = (os.getenv("SEEV_LOG_LEVEL") or "INFO").upper()
         level = getattr(logging, level_name, logging.INFO)
 
         root = logging.getLogger()
@@ -130,12 +128,10 @@ def _configure_logging_from_env() -> None:
         if any(getattr(h, "baseFilename", None) == str(p) for h in root.handlers):
             return
 
-        rotate = _truthy(os.getenv("SEEV_LOG_ROTATE", os.getenv("GLIN_LOG_ROTATE", "1")))
+        rotate = _truthy(os.getenv("SEEV_LOG_ROTATE", "1"))
         if rotate:
-            max_bytes = int(
-                os.getenv("SEEV_LOG_MAX_BYTES", os.getenv("GLIN_LOG_MAX_BYTES", str(5_242_880)))
-            )
-            backups = int(os.getenv("SEEV_LOG_BACKUPS", os.getenv("GLIN_LOG_BACKUPS", "3")))
+            max_bytes = int(os.getenv("SEEV_LOG_MAX_BYTES", str(5_242_880)))
+            backups = int(os.getenv("SEEV_LOG_BACKUPS", "3"))
             fh: logging.Handler = RotatingFileHandler(
                 filename=str(p), maxBytes=max_bytes, backupCount=backups, encoding="utf-8"
             )
@@ -146,7 +142,7 @@ def _configure_logging_from_env() -> None:
         fh.setFormatter(fmt)
         root.addHandler(fh)
 
-        if _truthy(os.getenv("SEEV_LOG_STDERR", os.getenv("GLIN_LOG_STDERR", "1"))):
+        if _truthy(os.getenv("SEEV_LOG_STDERR", "1")):
             # Only add if no existing StreamHandler to stderr is present
             if not any(isinstance(h, logging.StreamHandler) for h in root.handlers):
                 sh = logging.StreamHandler()
@@ -160,9 +156,7 @@ def _configure_logging_from_env() -> None:
     except Exception as e:  # pragma: no cover - best-effort, non-fatal
         try:
             logging.basicConfig(level=logging.INFO)
-            logging.getLogger(__name__).warning(
-                "Failed to configure SEEV_LOG_PATH/GLIN_LOG_PATH: %s", e
-            )
+            logging.getLogger(__name__).warning("Failed to configure SEEV_LOG_PATH: %s", e)
         except Exception:
             pass
 

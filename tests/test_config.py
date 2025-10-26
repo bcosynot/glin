@@ -18,7 +18,7 @@ from seev.config import (
 class TestGetTrackedEmails:
     def test_env_variable_takes_priority(self, monkeypatch):
         """Environment variable should take priority over other sources."""
-        monkeypatch.setenv("GLIN_TRACK_EMAILS", "env@example.com,env2@example.com")
+        monkeypatch.setenv("SEEV_TRACK_EMAILS", "env@example.com,env2@example.com")
 
         # Mock other sources to ensure they're not used
         with patch("seev.config._get_config_file_emails", return_value=["file@example.com"]):
@@ -28,7 +28,7 @@ class TestGetTrackedEmails:
 
     def test_config_file_fallback(self, monkeypatch):
         """Config file should be used when env variable is not set."""
-        monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
+        monkeypatch.delenv("SEEV_TRACK_EMAILS", raising=False)
 
         with patch("seev.config._get_config_file_emails", return_value=["file@example.com"]):
             with patch("seev.config._get_git_author_pattern", return_value="git@example.com"):
@@ -37,7 +37,7 @@ class TestGetTrackedEmails:
 
     def test_git_config_fallback(self, monkeypatch):
         """Git config should be used when env and config file are not available."""
-        monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
+        monkeypatch.delenv("SEEV_TRACK_EMAILS", raising=False)
 
         with patch("seev.config._get_config_file_emails", return_value=[]):
             with patch("seev.config._get_git_author_pattern", return_value="git@example.com"):
@@ -46,7 +46,7 @@ class TestGetTrackedEmails:
 
     def test_empty_when_no_config(self, monkeypatch):
         """Should return empty list when no configuration is found."""
-        monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
+        monkeypatch.delenv("SEEV_TRACK_EMAILS", raising=False)
 
         with patch("seev.config._get_config_file_emails", return_value=[]):
             with patch("seev.config._get_git_author_pattern", return_value=None):
@@ -55,7 +55,7 @@ class TestGetTrackedEmails:
 
     def test_env_variable_whitespace_handling(self, monkeypatch):
         """Environment variable should handle whitespace correctly."""
-        monkeypatch.setenv("GLIN_TRACK_EMAILS", " email1@example.com , email2@example.com , ")
+        monkeypatch.setenv("SEEV_TRACK_EMAILS", " email1@example.com , email2@example.com , ")
         emails = get_tracked_emails()
         assert emails == ["email1@example.com", "email2@example.com"]
 
@@ -98,16 +98,16 @@ class TestConfigFileEmails:
 
 class TestSetTrackedEmailsEnv:
     def test_sets_environment_variable(self, monkeypatch):
-        """Should set GLIN_TRACK_EMAILS environment variable."""
+        """Should set SEEV_TRACK_EMAILS environment variable."""
         emails = ["test1@example.com", "test2@example.com"]
         set_tracked_emails_env(emails)
 
-        assert os.environ["GLIN_TRACK_EMAILS"] == "test1@example.com,test2@example.com"
+        assert os.environ["SEEV_TRACK_EMAILS"] == "test1@example.com,test2@example.com"
 
     def test_handles_empty_list(self):
         """Should handle empty email list."""
         set_tracked_emails_env([])
-        assert os.environ["GLIN_TRACK_EMAILS"] == ""
+        assert os.environ["SEEV_TRACK_EMAILS"] == ""
 
 
 class TestCreateConfigFile:

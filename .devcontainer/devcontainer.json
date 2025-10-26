@@ -1,5 +1,5 @@
 {
-  "name": "Glin Development",
+  "name": "Seev Development",
   "image": "mcr.microsoft.com/devcontainers/python:3.13",
   "features": {
     "ghcr.io/devcontainers-extra/features/uv:latest": {}

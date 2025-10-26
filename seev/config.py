@@ -12,7 +12,7 @@ Also supports a lightweight `seev.toml` file with keys:
 - markdown_path = "..."       # new: markdown file path
 
 Backward compatibility:
-- Legacy GLIN_* environment variables and glin.toml are still read if SEEV_* / seev.toml are not set/present.
+- Legacy glin.toml configuration files are still read if seev.toml is not present.
 """
 
 import os
@@ -26,8 +26,8 @@ def get_tracked_emails() -> list[str]:
     Get the list of email addresses to track commits from.
 
     Priority order:
-    1. GLIN_TRACK_EMAILS environment variable (comma-separated)
-    2. glin.toml configuration file
+    1. SEEV_TRACK_EMAILS environment variable (comma-separated)
+    2. seev.toml configuration file (with glin.toml fallback)
     3. Git user.email configuration
     4. Git user.name configuration (as fallback)
 
@@ -35,7 +35,7 @@ def get_tracked_emails() -> list[str]:
         List of email addresses/patterns to track. Empty list if none configured.
     """
     # 1. Check environment variable first
-    env_emails = os.getenv("SEEV_TRACK_EMAILS") or os.getenv("GLIN_TRACK_EMAILS")
+    env_emails = os.getenv("SEEV_TRACK_EMAILS")
     if env_emails:
         return [email.strip() for email in env_emails.split(",") if email.strip()]
 
@@ -118,15 +118,13 @@ def _get_git_author_pattern() -> str | None:
 
 def set_tracked_emails_env(emails: list[str]) -> None:
     """
-    Set the SEEV_TRACK_EMAILS environment variable (and legacy GLIN_TRACK_EMAILS for compatibility).
+    Set the SEEV_TRACK_EMAILS environment variable.
 
     Args:
         emails: List of email addresses to track
     """
     value = ",".join(emails)
     os.environ["SEEV_TRACK_EMAILS"] = value
-    # Legacy support: also set GLIN_* for older clients reading it
-    os.environ["GLIN_TRACK_EMAILS"] = value
 
 
 def create_config_file(emails: list[str], config_path: Path | None = None) -> Path:
@@ -180,13 +178,12 @@ def get_db_path() -> str:
 
     Precedence:
     1. SEEV_DB_PATH if set (respects exact value, including ":memory:")
-    2. seev.toml key `db_path`
+    2. seev.toml key `db_path` (with glin.toml fallback)
     3. Sensible default: ~/.seev/db.sqlite3
-    4. Backward-compat: GLIN_DB_PATH and glin.toml if SEEV_* is not set
 
     This function is read-only; it does not create files or directories.
     """
-    value = os.getenv("SEEV_DB_PATH") or os.getenv("GLIN_DB_PATH")
+    value = os.getenv("SEEV_DB_PATH")
     if value and value.strip():
         return value.strip()
     file_val = _get_config_file_value("db_path")
@@ -197,13 +194,11 @@ def get_db_path() -> str:
 
 
 def get_db_autowrite() -> bool:
-    """Return True if SEEV_DB_AUTOWRITE is a truthy value (legacy GLIN_DB_AUTOWRITE supported).
+    """Return True if SEEV_DB_AUTOWRITE is a truthy value.
 
     Accepted truthy values (case-insensitive): '1', 'true', 'yes', 'on'.
     """
     val = os.getenv("SEEV_DB_AUTOWRITE")
-    if val is None:
-        val = os.getenv("GLIN_DB_AUTOWRITE")
     if val is None:
         return False
     return val.strip().lower() in {"1", "true", "yes", "on"}
@@ -213,11 +208,11 @@ def get_markdown_path() -> str:
     """Return the Markdown worklog path.
 
     Precedence:
-    1. SEEV_MD_PATH if set (fallback: GLIN_MD_PATH)
-    2. seev.toml key `markdown_path` (fallback: glin.toml)
+    1. SEEV_MD_PATH if set
+    2. seev.toml key `markdown_path` (with glin.toml fallback)
     3. Default: ./WORKLOG.md
     """
-    value = os.getenv("SEEV_MD_PATH") or os.getenv("GLIN_MD_PATH")
+    value = os.getenv("SEEV_MD_PATH")
     if value and value.strip():
         return value.strip()
     file_val = _get_config_file_value("markdown_path")
@@ -287,15 +282,9 @@ def get_tracked_repositories() -> list[str]:
 
     Precedence:
     1. SEEV_TRACK_REPOSITORIES (comma-separated) [fallback: SEEV_TRACK_REPOS]
-    2. seev.toml key track_repositories = ["..."] (fallback: glin.toml)
-    3. Backward-compat: GLIN_TRACK_REPOSITORIES / GLIN_TRACK_REPOS
+    2. seev.toml key track_repositories = ["..."] (with glin.toml fallback)
     """
-    env_val = (
-        os.getenv("SEEV_TRACK_REPOSITORIES")
-        or os.getenv("SEEV_TRACK_REPOS")
-        or os.getenv("GLIN_TRACK_REPOSITORIES")
-        or os.getenv("GLIN_TRACK_REPOS")
-    )
+    env_val = os.getenv("SEEV_TRACK_REPOSITORIES") or os.getenv("SEEV_TRACK_REPOS")
     if env_val:
         return [v.strip() for v in env_val.split(",") if v.strip()]
     file_repos = _get_config_file_repositories()
@@ -305,5 +294,5 @@ def get_tracked_repositories() -> list[str]:
 
 
 def set_tracked_repositories_env(repositories: list[str]) -> None:
-    """Set GLIN_TRACK_REPOSITORIES environment variable to a comma-separated list."""
-    os.environ["GLIN_TRACK_REPOSITORIES"] = ",".join(repositories)
+    """Set SEEV_TRACK_REPOSITORIES environment variable to a comma-separated list."""
+    os.environ["SEEV_TRACK_REPOSITORIES"] = ",".join(repositories)
