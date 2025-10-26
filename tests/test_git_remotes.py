@@ -1,4 +1,4 @@
-from glin.git_tools import get_remote_origin
+from seev.git_tools import get_remote_origin
 
 
 class Completed:
@@ -97,7 +97,7 @@ def test_get_remote_origin_with_workdir(monkeypatch):
         ),
     )
 
-    from glin.git_tools.remotes import get_remote_origin as _get
+    from seev.git_tools.remotes import get_remote_origin as _get
 
     res = _get(workdir="/some/project")
     assert res["name"] == "origin"

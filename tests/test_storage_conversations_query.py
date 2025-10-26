@@ -1,4 +1,4 @@
-from glin.storage import conversations as conv, db as sdb
+from seev.storage import conversations as conv, db as sdb
 
 
 def test_query_conversations_basic_filters(tmp_path):

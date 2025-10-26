@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from glin.mcp_app import run
+from seev.mcp_app import run
 
 
 def test_run_with_http_transport():

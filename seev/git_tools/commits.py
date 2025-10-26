@@ -10,7 +10,7 @@ from pydantic import Field
 from ..mcp_app import mcp
 from .utils import resolve_repo_root, run_git
 
-logger = logging.getLogger("glin.git.commits")
+logger = logging.getLogger("seev.git.commits")
 
 
 class CommitInfo(TypedDict):
@@ -31,7 +31,7 @@ class InfoResponse(TypedDict):
 NO_EMAIL_ERROR: ErrorResponse = {
     "error": (
         "No email addresses configured for tracking. "
-        "Set GLIN_TRACK_EMAILS environment variable, create glin.toml, "
+        "Set SEEV_TRACK_EMAILS environment variable (legacy GLIN_* supported), create seev.toml (legacy glin.toml supported), "
         "or configure git user.email"
     )
 }
@@ -55,7 +55,7 @@ def _parse_commit_lines(output: str) -> list[CommitInfo]:
 
 
 def _handle_git_error(e: Exception) -> list[ErrorResponse]:
-    # Log to standard logging so errors appear in GLIN_LOG_PATH output when configured
+    # Log to standard logging so errors appear in SEEV_LOG_PATH (or legacy GLIN_LOG_PATH) output when configured
     try:
         if isinstance(e, subprocess.CalledProcessError):
             stderr = e.stderr if isinstance(e.stderr, str) else str(e.stderr)
