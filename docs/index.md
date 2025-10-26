@@ -18,12 +18,12 @@ Your worklog, without the work.
 
 Seev turns your real work—commits, PRs, and AI conversations—into a clean daily worklog. No copy‑pasting. No end‑of‑day scramble.
 
-### Problem → Solution → Benefits
+### Your challenges → How Seev helps → What you get
 - Manual status updates steal time and are easy to forget.
 - Signal gets buried across repos, PRs, and chats.
 - Reviews and performance cycles demand accurate histories.
 
-Seev’s solution and benefits:
+How Seev helps and what you get:
 - Automatic capture from git and your AI assistant
 - Privacy‑first and local‑first by default
 - MCP‑native: works with Claude Desktop, Cursor, Cline, and more
