@@ -249,7 +249,7 @@ def test_configure_tracked_emails_env():
     assert result["success"] is True
     assert result["emails"] == emails
     assert result["method"] == "environment_variable"
-    assert "GLIN_TRACK_EMAILS" in result["message"]
+    assert "SEEV_TRACK_EMAILS" in result["message"]
 
 
 def test_configure_tracked_emails_file():
@@ -261,7 +261,7 @@ def test_configure_tracked_emails_file():
     emails = ["test1@example.com", "test2@example.com"]
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        expected_path = Path(tmpdir) / "glin.toml"
+        expected_path = Path(tmpdir) / "seev.toml"
         with patch("seev.git_tools.create_config_file", return_value=expected_path) as mock_create:
             result = configure_tracked_emails(emails, method="file")
 
@@ -964,7 +964,7 @@ def test_check_git_config_not_exists(monkeypatch):
 
 def test_get_config_source_environment(monkeypatch):
     """Test config source detection from environment variable."""
-    monkeypatch.setenv("GLIN_TRACK_EMAILS", "user@example.com")
+    monkeypatch.setenv("SEEV_TRACK_EMAILS", "user@example.com")
 
     source = _get_config_source()
 
@@ -974,10 +974,10 @@ def test_get_config_source_environment(monkeypatch):
 def test_get_config_source_config_file(monkeypatch, tmp_path):
     """Test config source detection from config file."""
 
-    monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
+    monkeypatch.delenv("SEEV_TRACK_EMAILS", raising=False)
 
     # Create a config file in current directory
-    config_file = tmp_path / "glin.toml"
+    config_file = tmp_path / "seev.toml"
     config_file.write_text('track_emails = ["user@example.com"]\n')
 
     # Change to temp directory
@@ -986,15 +986,17 @@ def test_get_config_source_config_file(monkeypatch, tmp_path):
     source = _get_config_source()
 
     assert source.startswith("config_file")
-    assert "glin.toml" in source
+    assert "seev.toml" in source
 
 
 def test_get_config_source_git_user_email(monkeypatch, tmp_path):
     """Test config source detection from git user.email."""
     import subprocess
+    from pathlib import Path
 
-    monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
+    monkeypatch.delenv("SEEV_TRACK_EMAILS", raising=False)
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
     def mock_run(cmd, **kwargs):
         if cmd == ["git", "config", "--get", "user.email"]:
@@ -1011,9 +1013,11 @@ def test_get_config_source_git_user_email(monkeypatch, tmp_path):
 def test_get_config_source_git_user_name(monkeypatch, tmp_path):
     """Test config source detection from git user.name."""
     import subprocess
+    from pathlib import Path
 
-    monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
+    monkeypatch.delenv("SEEV_TRACK_EMAILS", raising=False)
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
     def mock_run(cmd, **kwargs):
         if cmd == ["git", "config", "--get", "user.email"]:
@@ -1032,9 +1036,11 @@ def test_get_config_source_git_user_name(monkeypatch, tmp_path):
 def test_get_config_source_none(monkeypatch, tmp_path):
     """Test config source detection when no config exists."""
     import subprocess
+    from pathlib import Path
 
-    monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
+    monkeypatch.delenv("SEEV_TRACK_EMAILS", raising=False)
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
     def mock_run(cmd, **kwargs):
         raise subprocess.CalledProcessError(1, cmd)

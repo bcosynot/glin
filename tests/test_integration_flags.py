@@ -8,10 +8,10 @@ def make_git_output(commits):
 
 def test_default_no_db_autowrite(monkeypatch, tmp_path):
     # Ensure env flags are unset
-    monkeypatch.delenv("GLIN_DB_AUTOWRITE", raising=False)
-    monkeypatch.delenv("GLIN_DB_PATH", raising=False)
+    monkeypatch.delenv("SEEV_DB_AUTOWRITE", raising=False)
+    monkeypatch.delenv("SEEV_DB_PATH", raising=False)
     # Configure tracked emails so git_tools runs
-    monkeypatch.setenv("GLIN_TRACK_EMAILS", "dev@example.com")
+    monkeypatch.setenv("SEEV_TRACK_EMAILS", "dev@example.com")
 
     # Stub subprocess.run for git log
     commits = [
@@ -53,10 +53,10 @@ def test_default_no_db_autowrite(monkeypatch, tmp_path):
 def test_db_autowrite_enabled(monkeypatch, tmp_path):
     db_file = tmp_path / "auto.sqlite3"
     # Turn on flag and path
-    monkeypatch.setenv("GLIN_DB_AUTOWRITE", "1")
-    monkeypatch.setenv("GLIN_DB_PATH", str(db_file))
+    monkeypatch.setenv("SEEV_DB_AUTOWRITE", "1")
+    monkeypatch.setenv("SEEV_DB_PATH", str(db_file))
     # Configure tracked emails so git_tools runs
-    monkeypatch.setenv("GLIN_TRACK_EMAILS", "dev@example.com")
+    monkeypatch.setenv("SEEV_TRACK_EMAILS", "dev@example.com")
 
     commits = [
         {

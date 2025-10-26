@@ -1,20 +1,20 @@
-# **Glin**
+# **Seev**
 *Your worklog, without the work.*
 
 ---
 
-## Why Glin?
+## Why Seev?
 
 As an experienced developer, you know the drill: daily standups, sprint updates, performance reviews, knowledge transfer. 
 You spend hours *doing* the work, but documenting it? That's where the friction starts.
 
-**Glin solves this.** It's an [MCP server](https://modelcontextprotocol.io/) that automatically builds your worklog from tools you're already using:
+**Seev solves this.** It's an [MCP server](https://modelcontextprotocol.io/) that automatically builds your worklog from tools you're already using:
 
 - **Your git commits** — the actual code changes you makey
 - **Pull requests** — PRs you authored and reviewed
 - **Your AI assistant conversations** — the context, decisions, and problem-solving
 
-No manual logging. No "what did I even do today?" moments. Glin captures your flow of work transparently and turns it into clean, searchable records.
+No manual logging. No "what did I even do today?" moments. Seev captures your flow of work transparently and turns it into clean, searchable records.
 
 ### What You Get
 
@@ -28,9 +28,9 @@ No manual logging. No "what did I even do today?" moments. Glin captures your fl
 
 ## Quick Start
 
-### 1. Add Glin to Your AI Coding Assistant
+### 1. Add Seev to Your AI Coding Assistant
 
-Glin works with any MCP-compatible client. Here's how to set it up:
+Seev works with any MCP-compatible client. Here's how to set it up:
 
 #### Claude Desktop
 
@@ -42,9 +42,9 @@ Add to your Claude Desktop config file:
 ```json
 {
   "mcpServers": {
-    "glin": {
+    "seev": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/yourusername/glin.git", "glin"]
+      "args": ["--from", "git+https://github.com/yourusername/seev.git", "seev"]
     }
   }
 }
@@ -60,9 +60,9 @@ Add to Cursor's MCP settings file:
 ```json
 {
   "mcpServers": {
-    "glin": {
+    "seev": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/yourusername/glin.git", "glin"]
+      "args": ["--from", "git+https://github.com/yourusername/seev.git", "seev"]
     }
   }
 }
@@ -75,9 +75,9 @@ Add to Cline's MCP settings in VS Code settings:
 ```json
 {
   "cline.mcpServers": {
-    "glin": {
+    "seev": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/yourusername/glin.git", "glin"]
+      "args": ["--from", "git+https://github.com/yourusername/seev.git", "seev"]
     }
   }
 }
@@ -90,32 +90,32 @@ If you're developing or want to run from a local clone:
 ```json
 {
   "mcpServers": {
-    "glin": {
+    "seev": {
       "command": "uv",
-      "args": ["run", "--directory", "/path/to/glin", "python", "main.py"]
+      "args": ["run", "--directory", "/path/to/seev", "python", "main.py"]
     }
   }
 }
 ```
 
-**Note**: After updating your config, restart your AI assistant to load the Glin MCP server.
+**Note**: After updating your config, restart your AI assistant to load the Seev MCP server.
 
 ---
 
 ### 2. Initialize Your Workspace
 
-Once Glin is connected to your AI assistant, initialize a workspace to store your worklog:
+Once Seev is connected to your AI assistant, initialize a workspace to store your worklog:
 
 **Ask your AI assistant:**
 
-> "Use the init_glin tool to create a workspace at ~/glin-workspace"
+> "Use the init_seev tool to create a workspace at ~/seev-workspace"
 
 **What happens:**
 - Creates `WORKLOG.md` for your entries
 - Sets up `db.sqlite3` for tracking commits and conversations
-- Generates `~/.config/glin/glin.toml` with paths configured
+- Generates `~/.config/seev/seev.toml` with paths configured
 
-If the workspace already exists, Glin will confirm it's ready without modifying files.
+If the workspace already exists, Seev will confirm it's ready without modifying files.
 
 ---
 
@@ -137,7 +137,7 @@ Now the magic happens. Ask your AI assistant to create a worklog entry:
 
 **What your AI assistant does:**
 
-1. **Gathers context** using Glin's MCP tools:
+1. **Gathers context** using Seev's MCP tools:
    - Fetches your git commits for the period
    - Retrieves conversation history
    - Collects PR and issue activity (if GitHub MCP is available)
@@ -206,21 +206,21 @@ Now the magic happens. Ask your AI assistant to create a worklog entry:
 
 ### Email Tracking
 
-Glin needs to know which commits are yours. Configure email tracking in order of priority:
+Seev needs to know which commits are yours. Configure email tracking in order of priority:
 
-The `init_glin` tool creates `~/.config/glin/glin.toml`. Edit it to add your emails:
+The `init_seev` tool creates `~/.config/seev/seev.toml`. Edit it to add your emails:
 
 ```toml
-# Glin Configuration
+# Seev Configuration
 track_emails = ["you@work.com", "you@personal.com", "yourgithubhandle@users.github.com"]
 ```
 
 ### Workspace Paths
 
-By default, `init_glin` creates:
+By default, `init_seev` creates:
 - Worklog: `<workspace>/WORKLOG.md`
 - Database: `<workspace>/db.sqlite3`
-- Config: `~/.config/glin/glin.toml`
+- Config: `~/.config/seev/seev.toml`
 
 ---
 
@@ -231,7 +231,7 @@ By default, `init_glin` creates:
 Track commits across multiple repos by configuring tracked repositories:
 
 ```toml
-# ~/.config/glin/glin.toml
+# ~/.config/seev/seev.toml
 track_repositories = [
   "/path/to/local/repo",
   "github-org/repo-name",
@@ -239,7 +239,7 @@ track_repositories = [
 ]
 ```
 
-When generating worklog entries, Glin will include commits and PRs from all tracked repositories.
+When generating worklog entries, Seev will include commits and PRs from all tracked repositories.
 
 ### Custom Date Ranges
 
@@ -259,23 +259,23 @@ Examples:
 
 ### GitHub Integration
 
-If you have the [GitHub MCP server](https://github.com/modelcontextprotocol/servers/tree/main/src/github) configured, Glin automatically enriches worklog entries with:
+If you have the [GitHub MCP server](https://github.com/modelcontextprotocol/servers/tree/main/src/github) configured, Seev automatically enriches worklog entries with:
 
 - Pull request details (title, state, reviews)
 - Issue references and correlations
 - PR comments and review activity
 - Branch merge context
 
-No additional configuration needed — Glin detects and uses the GitHub MCP when available.
+No additional configuration needed — Seev detects and uses the GitHub MCP when available.
 
 ---
 
 ## MCP Tools Reference
 
-Glin provides these MCP tools for your AI assistant:
+Seev provides these MCP tools for your AI assistant:
 
 ### Workspace Management
-- **`init_glin`**: Initialize a workspace with WORKLOG.md, database, and config
+- **`init_seev`**: Initialize a workspace with WORKLOG.md, database, and config
 
 ### Git Tools
 - **`get_commits_by_date`**: Fetch commits for a date range
@@ -303,7 +303,7 @@ Glin provides these MCP tools for your AI assistant:
 
 ## MCP Prompts Reference
 
-Glin provides server-side prompts that your AI assistant can use:
+Seev provides server-side prompts that your AI assistant can use:
 
 ### `worklog_entry`
 
@@ -331,13 +331,13 @@ Generate a comprehensive worklog entry for a date or period.
 
 **Cause**: Email tracking not configured or no commits match your email.
 
-**Fix**: Configure `glin.toml` with your email addresses.
+**Fix**: Configure `seev.toml` with your email addresses.
 
 ### "Workspace not initialized"
 
-**Cause**: `init_glin` hasn't been run yet.
+**Cause**: `init_seev` hasn't been run yet.
 
-**Fix**: Ask your AI assistant to run `init_glin` with a workspace path.
+**Fix**: Ask your AI assistant to run `init_seev` with a workspace path.
 
 ### "Git tools unavailable"
 
@@ -398,15 +398,15 @@ make run-http
 Enable detailed logging for debugging:
 
 ```bash
-export GLIN_LOG_PATH="~/.glin/logs/server.log"
-export GLIN_LOG_LEVEL=DEBUG
+export SEEV_LOG_PATH="~/.seev/logs/server.log"
+export SEEV_LOG_LEVEL=DEBUG
 ```
 
 ---
 
 ## Privacy & Data
 
-**Everything stays local.** Glin:
+**Everything stays local.** Seev:
 - Stores data in your local filesystem
 - Never sends data to external services
 - Only accesses git repos you explicitly configure
@@ -446,6 +446,6 @@ Contributions welcome! Please:
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/glin/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/glin/discussions)
+- **Issues**: [GitHub Issues](https://github.com/yourusername/seev/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/seev/discussions)
 - **Documentation**: This README and inline code documentation

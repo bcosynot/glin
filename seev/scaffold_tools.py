@@ -35,7 +35,7 @@ def _write_toml(toml_path: Path, *, db_path: Path, markdown_path: Path) -> None:
         "# Managed by init_glin tool. You can edit values as needed.\n"
         f'db_path = "{str(db_path)}"\n'
         f'markdown_path = "{str(markdown_path)}"\n'
-        "# Optionally, set tracked emails (highest priority remains GLIN_TRACK_EMAILS env var):\n"
+        "# Optionally, set tracked emails (highest priority remains SEEV_TRACK_EMAILS env var):\n"
         "# track_emails = [\n"
         '#   "user1@example.com",\n'
         '#   "user2@example.com",\n'

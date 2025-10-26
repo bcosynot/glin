@@ -18,7 +18,7 @@ async def test_server():
 
     async with client:
         print("=" * 80)
-        print("Testing Glin MCP Server")
+        print("Testing Seev MCP Server")
         print("=" * 80)
 
         # Test 1: Get tracked email configuration

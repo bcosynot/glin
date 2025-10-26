@@ -44,6 +44,7 @@ def test_append_creates_file_and_heading(tmp_path, monkeypatch):
 def test_append_to_existing_heading_appends_below(tmp_path, monkeypatch):
     cwd = tmp_path
     monkeypatch.chdir(cwd)
+    import seev.markdown_tools
 
     monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
 
@@ -64,7 +65,7 @@ def test_append_to_existing_heading_appends_below(tmp_path, monkeypatch):
 def test_respects_file_path_argument_over_env(tmp_path, monkeypatch):
     file_arg = tmp_path / "custom.md"
     env_file = tmp_path / "env.md"
-    monkeypatch.setenv("GLIN_MD_PATH", str(env_file))
+    monkeypatch.setenv("SEEV_MD_PATH", str(env_file))
 
     res = append_to_markdown("x", file_path=str(file_arg))
     assert Path(res["path"]) == file_arg
@@ -74,7 +75,7 @@ def test_respects_file_path_argument_over_env(tmp_path, monkeypatch):
 
 def test_uses_env_when_no_file_path(tmp_path, monkeypatch):
     env_file = tmp_path / "env.md"
-    monkeypatch.setenv("GLIN_MD_PATH", str(env_file))
+    monkeypatch.setenv("SEEV_MD_PATH", str(env_file))
 
     res = append_to_markdown("y")
     assert Path(res["path"]) == env_file
@@ -100,6 +101,7 @@ def test_normalizes_windows_newlines(tmp_path, monkeypatch):
 
 def test_handles_file_without_trailing_newline(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
 
     monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
@@ -205,6 +207,7 @@ def test_mixed_empty_and_content_lines(tmp_path, monkeypatch):
 
 def test_inserts_heading_in_middle_of_document(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
 
     monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
@@ -234,6 +237,7 @@ def test_inserts_heading_in_middle_of_document(tmp_path, monkeypatch):
 
 def test_handles_file_ending_without_newline_edge_case(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
 
     monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
@@ -265,6 +269,7 @@ def test_handles_general_exception(tmp_path, monkeypatch):
 
 def test_heading_fallback_when_missing_after_insert(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
 
     monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
@@ -581,6 +586,7 @@ def test_read_date_entry_with_crlf_newlines(tmp_path, monkeypatch):
 def test_read_date_entry_uses_default_path(tmp_path, monkeypatch):
     """Test that read_date_entry uses get_markdown_path when no file_path provided."""
     monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
 
     monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
@@ -1130,6 +1136,7 @@ def test_merge_date_sections_section_order():
 def test_append_to_markdown_update_mode_false(tmp_path, monkeypatch):
     """Test that update_mode=False uses traditional append behavior."""
     monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
 
     monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
@@ -1157,6 +1164,7 @@ def test_append_to_markdown_update_mode_false(tmp_path, monkeypatch):
 def test_append_to_markdown_update_mode_true_no_existing(tmp_path, monkeypatch):
     """Test update_mode=True when no existing entry exists (falls through to normal append)."""
     monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
 
     monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
@@ -1192,6 +1200,7 @@ def test_append_to_markdown_update_mode_true_no_existing(tmp_path, monkeypatch):
 def test_append_to_markdown_update_mode_true_with_duplicates(tmp_path, monkeypatch):
     """Test update_mode=True deduplicates content."""
     monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
 
     monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
@@ -1246,6 +1255,7 @@ def test_append_to_markdown_update_mode_true_with_duplicates(tmp_path, monkeypat
 def test_append_to_markdown_update_mode_preserves_other_dates(tmp_path, monkeypatch):
     """Test that update_mode only affects the target date."""
     monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
 
     monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
@@ -1287,6 +1297,7 @@ def test_append_to_markdown_update_mode_preserves_other_dates(tmp_path, monkeypa
 def test_append_to_markdown_update_mode_metrics_replacement(tmp_path, monkeypatch):
     """Test that metrics are replaced in update mode."""
     monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
 
     monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
@@ -1322,6 +1333,7 @@ def test_append_to_markdown_update_mode_metrics_replacement(tmp_path, monkeypatc
 def test_append_to_markdown_update_mode_return_structure(tmp_path, monkeypatch):
     """Test that update_mode returns proper structure with merge stats."""
     monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
 
     monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
@@ -1355,6 +1367,7 @@ def test_append_to_markdown_update_mode_return_structure(tmp_path, monkeypatch):
 def test_append_to_markdown_backward_compatibility(tmp_path, monkeypatch):
     """Test that default behavior (update_mode not specified) works as before."""
     monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
 
     monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"

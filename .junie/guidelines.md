@@ -1,4 +1,4 @@
-# Glin Development Guidelines (project-specific)
+# Seev Development Guidelines (project-specific)
 
 Last verified: 2025-10-09 (local time)
 
@@ -20,27 +20,27 @@ This document captures build, testing, and development conventions that are spec
   - Devcontainer: `.devcontainer/devcontainer.json` uses Python 3.13 image and installs uv; `postCreateCommand` runs `uv sync --dev`.
 
 - Executing the MCP server (for manual runs)
-  - Entry point: `main.py` calls `glin.mcp_app.run()`.
+  - Entry point: `main.py` calls `seev.mcp_app.run()`.
   - Transports:
     - Default transport: `stdio`
-    - HTTP transport: pass `--transport http` to `run()`; the server will bind to port 8000. The logic lives in `glin/mcp_app.py` lines 16–27.
+    - HTTP transport: pass `--transport http` to `run()`; the server will bind to port 8000. The logic lives in `seev/mcp_app.py` lines 16–27.
   - Make targets (recommended):
     - `make run-stdio` → runs `uv run python main.py` (stdio transport, default)
     - `make run-http` → runs `uv run python main.py --transport http` (HTTP transport on port 8000)
   - Manual execution examples:
-    - `python -m glin.mcp_app` (stdio) — if you add your own CLI.
-    - `python main.py` (stdio), or `python -c "from glin.mcp_app import run; run(['script.py','--transport','http'])"` (HTTP).
+    - `python -m seev.mcp_app` (stdio) — if you add your own CLI.
+    - `python main.py` (stdio), or `python -c "from seev.mcp_app import run; run(['script.py','--transport','http'])"` (HTTP).
 
 - Email tracking configuration (central to Git tooling)
-  - Precedence (implemented in `glin/config.py`):
-    1. `GLIN_TRACK_EMAILS` env var (comma-separated). Example: `export GLIN_TRACK_EMAILS="user1@ex.com,user2@ex.com"`.
-    2. `glin.toml` file at one of:
-       - `./glin.toml`
-       - `~/.config/glin/glin.toml`
-       - `~/.glin.toml`
+  - Precedence (implemented in `seev/config.py`):
+    1. `SEEV_TRACK_EMAILS` env var (comma-separated). Example: `export SEEV_TRACK_EMAILS="user1@ex.com,user2@ex.com"`.
+    2. `seev.toml` file at one of:
+       - `./seev.toml`
+       - `~/.config/seev/seev.toml`
+       - `~/.seev.toml`
        Content format:
        ```toml
-       # Glin Configuration
+       # Seev Configuration
        track_emails = ["user1@example.com", "user2@example.com"]
        ```
     3. Git fallback: `git config --get user.email` (preferred), then `git config --get user.name`.
@@ -48,7 +48,7 @@ This document captures build, testing, and development conventions that are spec
     - `get_tracked_emails()` → list[str]
     - `set_tracked_emails_env(emails: list[str])` → sets env var for current process
     - `create_config_file(emails, path?)` → writes TOML with `track_emails`
-  - MCP tools (via `glin/git_tools.py`):
+  - MCP tools (via `seev/git_tools.py`):
     - `get_tracked_email_config` — returns current config snapshot
     - `configure_tracked_emails` — set via env (`method='env'`) or file (`method='file'`)
 
@@ -59,7 +59,7 @@ This document captures build, testing, and development conventions that are spec
 - Invocation
   - Preferred: `uv run pytest` (or `make test` which chooses `uv` when available).
   - Quiet + coverage are configured by default via `pyproject.toml`:
-    - `addopts = "-q --cov=glin --cov-report=term-missing --cov-report=xml:coverage.xml"`
+    - `addopts = "-q --cov=seev --cov-report=term-missing --cov-report=xml:coverage.xml"`
     - Patterns: `testpaths = ["tests"]`, `python_files = ["test_*.py", "*_test.py"]`.
 
 - What to expect
@@ -70,30 +70,30 @@ This document captures build, testing, and development conventions that are spec
 - Adding new tests (project conventions)
   - Place tests under `tests/` with filenames matching the patterns above.
   - Use `pytest.monkeypatch` for environment and filesystem isolation. Examples:
-    - For config: monkeypatch `GLIN_TRACK_EMAILS`.
-    - For git-dependent code in `glin/git_tools`, prefer patching `subprocess.run` or the high-level helpers. See `tests/test_git_tools.py` for patterns, including the `make_run` helper that matches command prefixes to mocked results.
+    - For config: monkeypatch `SEEV_TRACK_EMAILS`.
+    - For git-dependent code in `seev/git_tools`, prefer patching `subprocess.run` or the high-level helpers. See `tests/test_git_tools.py` for patterns, including the `make_run` helper that matches command prefixes to mocked results.
   - For filesystem interactions (e.g., `markdown_tools.append_to_markdown`):
     - Use `tmp_path` and override CWD or pass explicit `file_path` to avoid writing into the repo.
     - The function normalizes newlines, creates parent dirs, and ensures a date-scoped `## YYYY-MM-DD` heading; tests assert structure and positions (line numbers returned in the result dict).
   - Keep tests deterministic across developer machines:
-    - If behavior can vary with local git config, patch `glin.config._get_config_file_emails` and/or `glin.config._get_git_author_pattern` in tests to the desired value.
+    - If behavior can vary with local git config, patch `seev.config._get_config_file_emails` and/or `seev.config._get_git_author_pattern` in tests to the desired value.
 
 - Demonstration: create and run a simple test
   - We validated the following example end-to-end on 2025-10-09.
   - Example file (temporary): `tests/test_demo_example.py`
     ```python
     def test_demo_config_env(monkeypatch):
-        monkeypatch.setenv("GLIN_TRACK_EMAILS", "a@b.com,b@c.com")
-        from glin.config import get_tracked_emails
+        monkeypatch.setenv("SEEV_TRACK_EMAILS", "a@b.com,b@c.com")
+        from seev.config import get_tracked_emails
         assert get_tracked_emails() == ["a@b.com", "b@c.com"]
 
     def test_demo_unset_env(monkeypatch):
         # Make deterministic regardless of local git config
-        monkeypatch.delenv("GLIN_TRACK_EMAILS", raising=False)
-        import glin.config as cfg
+        monkeypatch.delenv("SEEV_TRACK_EMAILS", raising=False)
+        import seev.config as cfg
         monkeypatch.setattr(cfg, "_get_config_file_emails", lambda: [])
         monkeypatch.setattr(cfg, "_get_git_author_pattern", lambda: None)
-        from glin.config import get_tracked_emails
+        from seev.config import get_tracked_emails
         assert get_tracked_emails() == []
     ```
   - Run:
@@ -117,12 +117,12 @@ This document captures build, testing, and development conventions that are spec
     - `make hooks` → enables repo-managed pre-commit that formats + fixes before commit.
 
 - Git/MCP tool behaviors worth remembering
-  - `glin/git_tools.py` uses `get_tracked_emails()` to build multiple `--author=...` filters for `git log`; when no emails are configured it returns an error entry instead of querying git.
+  - `seev/git_tools.py` uses `get_tracked_emails()` to build multiple `--author=...` filters for `git log`; when no emails are configured it returns an error entry instead of querying git.
   - `get_commits_by_date(since, until)` uses human-friendly ranges (`yesterday`, `1 week ago`, `YYYY-MM-DD`). Returns `[{"info": "No commits found in date range"}]` when empty.
-  - The public MCP tools are registered via decorators attached to a single shared `FastMCP` instance (`glin/mcp_app.py`). Import order intentionally creates that instance first, then imports tool modules so their decorators register on the same instance.
+  - The public MCP tools are registered via decorators attached to a single shared `FastMCP` instance (`seev/mcp_app.py`). Import order intentionally creates that instance first, then imports tool modules so their decorators register on the same instance.
 
 - Filesystem and newline semantics in `markdown_tools.append_to_markdown`
-  - Default target file is `./WORKLOG.md`, overridden by `file_path` argument or `GLIN_MD_PATH`.
+  - Default target file is `./WORKLOG.md`, overridden by `file_path` argument or `SEEV_MD_PATH`.
   - Ensures Unix newlines, heading for today (`## YYYY-MM-DD`), and correct blank-line spacing around sections.
   - Returns a rich dict (path, bullets added, line numbers, whether heading was added, etc.) to aid calling clients and tests.
 
@@ -132,7 +132,7 @@ This document captures build, testing, and development conventions that are spec
   - When asserting multi-line file edits, normalize newlines and compare structural markers (headings, bullet positions) rather than raw byte offsets.
 
 - Common pitfalls
-  - Importing `glin.mcp_app` creates the shared `FastMCP` instance; tests patch `mcp` where needed. Ensure `fastmcp` is available in your environment (`uv sync`) when executing runtime code outside tests.
+  - Importing `seev.mcp_app` creates the shared `FastMCP` instance; tests patch `mcp` where needed. Ensure `fastmcp` is available in your environment (`uv sync`) when executing runtime code outside tests.
   - Running git commands requires a repository and author filters; unit tests simulate these via mocks.
 
 ---
@@ -159,7 +159,7 @@ Housekeeping for this session (2025-10-09)
 
 ## Modules and directory structure (updated 2025-10-09)
 
-- Top-level package: `glin/`
+- Top-level package: `seev/`
   - `mcp_app.py` — creates and runs the shared FastMCP instance; imports tool modules so their decorators register on the same instance.
   - `config.py` — configuration helpers (e.g., tracked emails resolution with env/file/git fallbacks).
   - `markdown_tools.py` — filesystem-safe Markdown utilities (newline normalization, date headings, etc.).
@@ -169,10 +169,10 @@ Housekeeping for this session (2025-10-09)
     - `config_tools.py` — tracked-email configuration tools used by MCP.
     - `diffs.py` — diff and patch helpers.
     - `files.py` — file-level Git helpers.
-  - Compatibility shim: `git_tools.py` — maintained for backward compatibility; re-exports the public API to preserve existing imports (e.g., `from glin.git_tools import get_commits_by_date`). New code SHOULD prefer explicit imports from `glin.git_tools.<module>`.
+  - Compatibility shim: `git_tools.py` — maintained for backward compatibility; re-exports the public API to preserve existing imports (e.g., `from seev.git_tools import get_commits_by_date`). New code SHOULD prefer explicit imports from `seev.git_tools.<module>`.
 
 Notes
-- Tests were updated to patch module-level functions in the new package layout. When writing tests, patch `glin.git_tools.<module>.<name>` rather than deep internals.
+- Tests were updated to patch module-level functions in the new package layout. When writing tests, patch `seev.git_tools.<module>.<name>` rather than deep internals.
 - The public API is preserved; the shim is intended to ease migration for external users.
 
 ## Type annotations: arguments and returns
