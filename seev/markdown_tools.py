@@ -540,7 +540,7 @@ def append_to_markdown(
     - Update mode (update_mode=True): Read existing entry for the date and merge new content with existing sections instead of appending.
     - Ensures a heading for the specified date ("## YYYY-MM-DD"). If no date is provided, uses the current local date. Creates it if missing.
     - Appends content under the chosen date's heading, before the next heading or at the end.
-    - Path resolution: file_path argument > GLIN_MD_PATH env var > glin.toml `markdown_path` > ./WORKLOG.md.
+    - Path resolution: file_path argument > SEEV_MD_PATH env var (fallback: GLIN_MD_PATH) > seev.toml `markdown_path` (fallback: glin.toml) > ./WORKLOG.md.
 
     Args:
         content: The text to append. Must be non-empty (after stripping). Newlines will be normalized.
@@ -570,7 +570,7 @@ def append_to_markdown(
         else:
             # Delegate env/TOML/default resolution to config
             target = get_markdown_path()
-            used_env_flag = bool(os.getenv("GLIN_MD_PATH"))
+            used_env_flag = bool(os.getenv("SEEV_MD_PATH") or os.getenv("GLIN_MD_PATH"))
             # Consider defaulted when neither param nor env provided and config didn't override
             defaulted_flag = (not used_env_flag) and (target == "WORKLOG.md")
         path = Path(target)
@@ -874,7 +874,7 @@ async def _tool_read_date_entry(
         "Default behavior: each non-empty line becomes a bullet. Set preserve_lines=True to write "
         "lines as-is (useful for headings like '### Goals'). Set update_mode=True to merge with "
         "existing entry if present (deduplicates commits and bullets). Creates date heading (## YYYY-MM-DD) "
-        "if missing. Target file can be specified, or resolves as: explicit file_path > GLIN_MD_PATH > glin.toml 'markdown_path' > ./WORKLOG.md."
+        "if missing. Target file can be specified, or resolves as: explicit file_path > SEEV_MD_PATH (fallback: GLIN_MD_PATH) > seev.toml 'markdown_path' (fallback: glin.toml) > ./WORKLOG.md."
     ),
 )
 async def _tool_append_to_markdown(

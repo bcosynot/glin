@@ -1,7 +1,7 @@
 import subprocess
 from typing import TypedDict
 
-import glin.git_tools as git_tools
+import seev.git_tools as git_tools
 
 from ..mcp_app import mcp
 
@@ -43,10 +43,13 @@ def _get_config_source() -> str:
     import os
     from pathlib import Path
 
-    if os.getenv("GLIN_TRACK_EMAILS"):
+    if os.getenv("SEEV_TRACK_EMAILS") or os.getenv("GLIN_TRACK_EMAILS"):
         return "environment_variable"
 
     config_paths = [
+        Path.cwd() / "seev.toml",
+        Path.home() / ".config" / "seev" / "seev.toml",
+        Path.home() / ".seev.toml",
         Path.cwd() / "glin.toml",
         Path.home() / ".config" / "glin" / "glin.toml",
         Path.home() / ".glin.toml",
@@ -66,10 +69,18 @@ def _get_repositories_config_source() -> str:
     import os
     from pathlib import Path
 
-    if os.getenv("GLIN_TRACK_REPOSITORIES") or os.getenv("GLIN_TRACK_REPOS"):
+    if (
+        os.getenv("SEEV_TRACK_REPOSITORIES")
+        or os.getenv("SEEV_TRACK_REPOS")
+        or os.getenv("GLIN_TRACK_REPOSITORIES")
+        or os.getenv("GLIN_TRACK_REPOS")
+    ):
         return "environment_variable"
 
     config_paths = [
+        Path.cwd() / "seev.toml",
+        Path.home() / ".config" / "seev" / "seev.toml",
+        Path.home() / ".seev.toml",
         Path.cwd() / "glin.toml",
         Path.home() / ".config" / "glin" / "glin.toml",
         Path.home() / ".glin.toml",
@@ -107,7 +118,7 @@ def configure_tracked_emails(
             git_tools.set_tracked_emails_env(emails)
             return {
                 "success": True,
-                "message": f"Set GLIN_TRACK_EMAILS environment variable with {len(emails)} emails",
+                "message": f"Set SEEV_TRACK_EMAILS environment variable with {len(emails)} emails (legacy GLIN_* supported)",
                 "emails": emails,
                 "method": "environment_variable",
                 "config_path": None,
@@ -157,7 +168,7 @@ def _tool_get_tracked_repositories_config() -> RepositoriesConfig:  # pragma: no
     name="configure_tracked_emails",
     description=(
         "Configure email addresses to track commits from. Supports two methods: 'env' to set the "
-        "GLIN_TRACK_EMAILS environment variable, or 'file' to create a glin.toml configuration file."
+        "SEEV_TRACK_EMAILS environment variable (legacy GLIN_* supported), or 'file' to create a seev.toml configuration file (legacy glin.toml supported)."
     ),
 )
 def _tool_configure_tracked_emails(
