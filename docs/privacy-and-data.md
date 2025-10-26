@@ -49,3 +49,35 @@ Use the `configure_tracked_emails` MCP tool to set these programmatically.
 ## External services
 
 Seev itself does not call remote APIs. If you run your agent with additional MCP servers (e.g., GitHub), those servers have their own privacy characteristics. Review their docs and configure credentials carefully.
+
+## Optional analytics (docs site)
+
+The published documentation site can optionally use [Plausible Analytics](https://plausible.io/), a lightweight, privacy‑friendly analytics tool. This is disabled by default and ships as opt‑in.
+
+What ships by default
+- The site includes a tiny loader at `docs/js/analytics.plausible.js` that does nothing unless explicitly enabled.
+- No third‑party requests are made without your action.
+
+How to enable (docs maintainers)
+1) Edit `mkdocs.yml` and add a Plausible domain meta tag under `extra.meta`:
+   ```yaml
+   extra:
+     meta:
+       - name: "plausible:domain"
+         content: "docs.example.com"  # your docs domain
+   ```
+2) (Recommended) Add an SRI hash for Plausible’s script to enforce Subresource Integrity. Note that Plausible occasionally updates the script; you must refresh this hash when upgrading.
+   ```yaml
+   extra:
+     meta:
+       - name: "plausible:sri"
+         content: "sha384-REPLACE_WITH_VALID_HASH"
+   ```
+3) Rebuild the site: `uv run mkdocs build --strict`.
+
+How it works
+- On page load, the loader looks for `meta[name="plausible:domain"]`. If found, it injects the official `https://plausible.io/js/script.js` with `defer` and `crossorigin="anonymous"`. If an SRI meta is present, it sets `integrity` accordingly.
+- If the meta is absent (default in this repo), analytics remains OFF.
+
+Data policy
+- Plausible does not use cookies and does not collect PII. See their published policy for details.
