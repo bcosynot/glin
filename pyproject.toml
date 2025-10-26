@@ -16,6 +16,10 @@ dev = [
     "ruff>=0.13.2",
     "pytest>=8.3.0",
     "pytest-cov>=5.0.0",
+    "mkdocs-material",
+    "mkdocstrings[python]",
+    "mike",
+    "mkdocs-git-revision-date-localized-plugin",
 ]
 
 [tool.pytest.ini_options]
