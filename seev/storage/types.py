@@ -102,3 +102,21 @@ class ConversationQuery(TypedDict, total=False):
     order: Literal["asc", "desc"]
     limit: int
     offset: int
+
+
+class ConversationSummary(TypedDict, total=False):
+    """A stored summary of a conversation for a given date."""
+
+    id: NotRequired[int]
+    date: str  # YYYY-MM-DD
+    conversation_id: int
+    title: NotRequired[str]
+    summary: str
+    created_at: NotRequired[str]
+
+
+class ConversationSummaryQuery(TypedDict, total=False):
+    date: str
+    conversation_id: int
+    limit: int
+    offset: int
