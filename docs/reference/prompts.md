@@ -17,20 +17,56 @@ This page documents server-side prompts exposed via the MCP Prompts API. These p
 - Returns: list of messages like [{"role": "system"|"user", "content": "..."}] suitable for your LLM client.
 - See code: seev.prompts.worklog_entry_prompt.
 
-### Example
+### Slash command usage
 
-Request (client-side pseudocode):
+- Syntax: `/worklog_entry <date> [inputs]`
+  - Positional arguments: `date` is required; `inputs` is optional.
+  - Quoting: wrap strings that contain spaces in quotes. Double or single quotes are both allowed.
+  - Spacing: use a single space between tokens.
 
-```
-prompt = client.get_prompt("worklog_entry")
-messages = prompt.render(date="2025-10-25", inputs="Wrapped up feature X; reviewed PR #123")
-# Feed messages to your LLM and then let it call MCP tools per instructions.
-```
+Examples (today is 2025-10-26):
+- `/worklog_entry 2025-10-25 "Wrapped up feature X; reviewed PR #123"`
+- `/worklog_entry "last 2 days" "Pair-programmed on the parser; validated caching behavior"`
+- `/worklog_entry 2025-10-20..2025-10-26`
 
-Expected tool calls during execution (by your LLM agent):
+Expected tool calls (handled by your assistant):
 - get_tracked_repositories_config
 - get_commits_by_date (per repo)
 - get_enriched_commits (optional)
 - get_recent_conversations
 - get_remote_origin → determine_commit_url_prefix
 - append_to_markdown (once per date)
+
+---
+
+## conversation_summary
+
+- Purpose: Create a concise summary of the current task/conversation and persist it by calling the `record_conversation_summary` tool.
+- Arguments:
+  - date (string, optional): ISO calendar date (YYYY-MM-DD). If omitted/blank, the server resolves it to today's local date when rendering the prompt.
+  - title (string, optional): Title used when creating a new conversation. If not provided and `conversation_id` is null, the LLM should derive a short title from the first sentence (<= 80 chars, no newlines).
+  - conversation_id (integer, optional): Existing conversation id to append the summary to; when provided, `title` is ignored.
+  - inputs (string, optional): Notes, highlights, or raw text to base the summary on.
+- Behavior highlights:
+  - The prompt instructs the LLM to write a brief summary (bullets or short sentences) emphasizing goals, key decisions, outcomes, blockers, and next steps.
+  - Immediately after writing the summary, the LLM must call `record_conversation_summary` with the resolved parameters, using the server-injected date to avoid ambiguity.
+- Returns: list of messages like [{"role": "system"|"user", "content": "..."}] suitable for your LLM client.
+- See code: seev.prompts.conversation_summary_prompt.
+
+### Slash command usage
+
+- Syntax: `/conversation_summary <date|""> <title|""> <conversation_id|""> <inputs|"">`
+  - Positional arguments, left-to-right. You may omit trailing optional arguments entirely.
+  - Use an empty quoted string "" as a placeholder to skip an earlier argument (e.g., blank date means "use today").
+  - Quoting: wrap strings with spaces in quotes. Double or single quotes are both allowed.
+  - Spacing: use a single space between tokens.
+
+Examples (today is 2025-10-26):
+- `/conversation_summary "" "Cache rollout" "" "Finished caching layer; decided on Redis; add integration tests next"`
+- `/conversation_summary 2025-10-26 "Cache rollout" "" "Finished caching layer; decided on Redis; add integration tests next"`
+- `/conversation_summary 2025-10-26 "" 42 "Short update"`
+
+Rules your assistant should follow (already encoded in the prompt):
+- Make exactly one tool call to `record_conversation_summary`.
+- If `conversation_id` is provided, ignore title derivation.
+- If both `conversation_id` and `title` are omitted (i.e., both placeholders are empty), derive a short title from the first sentence (≤ 80 chars).

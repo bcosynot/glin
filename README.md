@@ -317,6 +317,23 @@ Generate a comprehensive worklog entry for a date or period.
 
 ---
 
+### `conversation_summary`
+
+Create a concise summary of the current task/conversation and persist it by calling the `record_conversation_summary` tool.
+
+**Arguments:**
+- `date` (optional): ISO YYYY-MM-DD. If blank, the server injects today's local date.
+- `title` (optional): Title used when creating a new conversation; ignored if `conversation_id` is provided.
+- `conversation_id` (optional): Existing conversation id to append to.
+- `inputs` (optional): Notes or text to base the summary on.
+
+**Behavior:**
+- The LLM writes a short summary (bullets or brief sentences), then immediately calls `record_conversation_summary` with the resolved parameters.
+
+**Usage:**
+
+> "Use the conversation_summary prompt with inputs: wrapped up caching layer; chose Redis; add tests next week."
+
 ## Troubleshooting
 
 ### "No commits found"

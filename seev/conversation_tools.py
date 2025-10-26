@@ -1,4 +1,6 @@
-from typing import Any
+from typing import Annotated, Any
+
+from pydantic import Field
 
 from .mcp_app import mcp
 from .storage.conversations import (
@@ -57,15 +59,49 @@ async def record_conversation_message(
     ),
 )
 async def record_conversation_summary(
-    date: str,
-    summary: str,
-    conversation_id: int | None = None,
-    title: str | None = None,
+    date: Annotated[
+        str,
+        Field(description="ISO date the summary applies to. Use YYYY-MM-DD (e.g., 2025-10-26)."),
+    ],
+    summary: Annotated[
+        str,
+        Field(description="Concise summary for the conversation on that date. Markdown allowed."),
+    ],
+    conversation_id: Annotated[
+        int | None,
+        Field(
+            description=(
+                "Existing conversation id. If omitted or null, a new conversation is created."
+            )
+        ),
+    ] = None,
+    title: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Optional title when creating a new conversation; also stored with the summary."
+            )
+        ),
+    ] = None,
 ) -> dict[str, Any]:
-    """Store a conversation summary into the dedicated table and return identifiers."""
+    """Store a conversation summary and return identifiers.
+
+    Parameters
+    ----------
+    date: str
+        ISO-8601 calendar date (YYYY-MM-DD) that this summary belongs to.
+    summary: str
+        Free-text summary for that date; short markdown is acceptable.
+    conversation_id: int | None
+        Pass an existing conversation id to append; when omitted, a new conversation
+        is created first and its id is returned.
+    title: str | None
+        Optional title used when creating a new conversation; if provided it is also
+        saved alongside the summary row.
+    """
     if conversation_id is None:
         conversation_id = add_conversation(title=title)
-    # If title is provided, we keep it in the summary record; otherwise reuse existing conv title
+    # If title is provided, keep it in the summary record; otherwise reuse existing conv title
     sid = add_summary(date=date, conversation_id=conversation_id, title=title, summary=summary)
     return {
         "summary_id": int(sid),
