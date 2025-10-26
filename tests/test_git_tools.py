@@ -397,7 +397,7 @@ def test_get_commit_diff_with_workdir(monkeypatch):
         ),
     )
 
-    from glin.git_tools.diffs import get_commit_diff as _gcd
+    from seev.git_tools.diffs import get_commit_diff as _gcd
 
     result = _gcd("abc123", workdir="/work/here")
     assert result["hash"] == "abc123"
@@ -676,7 +676,7 @@ def test_get_commit_files_with_workdir(monkeypatch):
         ),
     )
 
-    from glin.git_tools.files import get_commit_files as _gcf
+    from seev.git_tools.files import get_commit_files as _gcf
 
     result = _gcf("abc123", workdir="/work/here")
     assert result["hash"] == "abc123"

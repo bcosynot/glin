@@ -132,7 +132,9 @@ def _configure_logging_from_env() -> None:
 
         rotate = _truthy(os.getenv("SEEV_LOG_ROTATE", os.getenv("GLIN_LOG_ROTATE", "1")))
         if rotate:
-            max_bytes = int(os.getenv("SEEV_LOG_MAX_BYTES", os.getenv("GLIN_LOG_MAX_BYTES", str(5_242_880))))
+            max_bytes = int(
+                os.getenv("SEEV_LOG_MAX_BYTES", os.getenv("GLIN_LOG_MAX_BYTES", str(5_242_880)))
+            )
             backups = int(os.getenv("SEEV_LOG_BACKUPS", os.getenv("GLIN_LOG_BACKUPS", "3")))
             fh: logging.Handler = RotatingFileHandler(
                 filename=str(p), maxBytes=max_bytes, backupCount=backups, encoding="utf-8"
@@ -158,7 +160,9 @@ def _configure_logging_from_env() -> None:
     except Exception as e:  # pragma: no cover - best-effort, non-fatal
         try:
             logging.basicConfig(level=logging.INFO)
-            logging.getLogger(__name__).warning("Failed to configure SEEV_LOG_PATH/GLIN_LOG_PATH: %s", e)
+            logging.getLogger(__name__).warning(
+                "Failed to configure SEEV_LOG_PATH/GLIN_LOG_PATH: %s", e
+            )
         except Exception:
             pass
 
