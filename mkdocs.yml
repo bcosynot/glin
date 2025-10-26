@@ -26,11 +26,18 @@ markdown_extensions:
       permalink: true
   - pymdownx.highlight
   - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
 
 nav:
   - Home: index.md
   - Guides:
       - Guides Home: guides/index.md
+      - Quick Start: guides/quick-start.md
+      - Workspace & Configuration: guides/workspace-and-configuration.md
+      - Generating Worklogs: guides/generating-worklogs.md
+      - MCP Clients: guides/mcp-clients.md
   - Reference:
       - Reference Home: reference/index.md
   - Troubleshooting: troubleshooting.md
