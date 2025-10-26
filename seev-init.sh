@@ -1,34 +1,43 @@
 #!/usr/bin/env bash
-# glin-init.sh — Initialize local storage dir and write XDG config for Glin
+# seev-init.sh — Your one-minute Seev setup
 #
-# This script creates a directory to hold your SQLite database and Markdown
-# worklog, and writes a friendly glin.toml config file under your XDG config
-# path (default: ~/.config/glin/glin.toml). It is safe to run multiple times;
-# existing config will be backed up with a timestamp.
+# What you get
+# - A ready-to-use folder that holds your personal Seev data:
+#   • A Markdown worklog you can open and edit anywhere
+#   • A local SQLite database Seev uses to store insights
+# - A friendly seev.toml written to your XDG config (default: ~/.config/seev/seev.toml)
+# - Safe re-runs: if a config exists, we back it up with a timestamp and explain what changed
 #
-# Usage:
-#   ./glin-init.sh [options] <target_dir>
-#   If <target_dir> or options are omitted, the script will prompt for each;
-#   press Enter to accept defaults or leave optional fields blank.
+# Why run this?
+# - Start capturing worklogs and Git insights immediately, with sensible defaults
+# - Keep your data in one place so Seev’s CLI and MCP tools “just work”
+# - Customize later — you can edit the config or use env vars without re-running the script
 #
-# Options:
-#   -e, --emails CSV       Comma-separated emails to track (e.g. a@b.com,b@c.com).
-#                          If omitted, example emails will be written as guidance.
-#   -r, --repos CSV        Comma-separated repositories to track (paths or owner/repo).
-#                          If omitted, an example list is written.
-#   -m, --md NAME          Markdown filename to create in target_dir (default: WORKLOG.md)
-#   -d, --db NAME          DB filename to create in target_dir (default: glin.sqlite3)
-#   -y, --yes              Non-interactive; accept defaults and create as needed.
-#   -h, --help             Show this help and exit.
+# Quick start
+#   ./seev-init.sh [options] <target_dir>
+#   If you omit <target_dir> or options, we’ll ask a few quick questions.
+#   Press Enter to accept defaults — you can tweak things any time.
 #
-# Examples:
-#   ./glin-init.sh ~/glin-data
-#   ./glin-init.sh -e "me@ex.com" -r "owner/repo,~/code/that-repo" ~/glin-data
+# Options
+#   -e, --emails CSV  People to attribute commits to (e.g., a@b.com,b@c.com).
+#                     Used to filter Git history so your reports reflect your work.
+#                     Skip it for now — we’ll write examples you can edit later.
+#   -r, --repos  CSV  Repositories to include (paths or owner/repo). Examples added if blank.
+#   -m, --md     NAME Markdown filename to create in <target_dir> (default: WORKLOG.md).
+#   -d, --db     NAME Database filename to create in <target_dir> (default: seev.sqlite3).
+#   -y, --yes         Non-interactive; accept defaults and create what’s needed.
+#   -h, --help        Show this help and exit.
 #
-# Notes:
-# - You can override at runtime via env vars used by Glin:
+# Examples
+#   Minimal (accept prompts and defaults):
+#     ./seev-init.sh ~/seev-data
+#   Pre-configure emails and repos (no prompts):
+#     ./seev-init.sh -y -e "me@ex.com" -r "owner/repo,~/code/that-repo" ~/seev-data
+#
+# Tips
+# - You can override settings at runtime via env vars (great for experiments):
 #     SEEV_DB_PATH, SEEV_MD_PATH, SEEV_TRACK_EMAILS, SEEV_TRACK_REPOSITORIES
-# - Config keys written here are read by glin/config.py.
+# - The config keys written here are read by seev/config.py and used across the tools.
 set -euo pipefail
 
 print_help() {
@@ -50,7 +59,7 @@ confirm() {
 
 # Defaults
 MD_NAME="WORKLOG.md"
-DB_NAME="glin.sqlite3"
+DB_NAME="seev.sqlite3"
 EMAILS=""
 REPOS=""
 ASSUME_YES=0
@@ -85,13 +94,13 @@ prompt_with_default() {
   fi
 }
 
-DEFAULT_TARGET_DIR="$HOME/.local/share/glin"
+DEFAULT_TARGET_DIR="$HOME/.local/share/seev"
 
 if [[ ${#ARGS[@]} -lt 1 ]]; then
   if [[ ${ASSUME_YES:-0} -eq 1 ]]; then
     TARGET_DIR="$DEFAULT_TARGET_DIR"
   else
-    TARGET_DIR=$(prompt_with_default "Enter target directory for Glin data" "$DEFAULT_TARGET_DIR")
+    TARGET_DIR=$(prompt_with_default "Enter target directory for Seev data" "$DEFAULT_TARGET_DIR")
   fi
 else
   TARGET_DIR=${ARGS[0]}
@@ -105,7 +114,7 @@ if [[ ${ASSUME_YES:-0} -eq 0 ]]; then
   if [[ -z "$MD_NAME" || "$MD_NAME" == "WORKLOG.md" ]]; then
     MD_NAME=$(prompt_with_default "Markdown filename" "$MD_NAME")
   fi
-  if [[ -z "$DB_NAME" || "$DB_NAME" == "glin.sqlite3" ]]; then
+  if [[ -z "$DB_NAME" || "$DB_NAME" == "seev.sqlite3" ]]; then
     DB_NAME=$(prompt_with_default "Database filename" "$DB_NAME")
   fi
   if [[ -z "$EMAILS" ]]; then
@@ -119,8 +128,8 @@ fi
 # Resolve XDG config path
 XDG_CONFIG_HOME_DEFAULT="$HOME/.config"
 XDG_ROOT="${XDG_CONFIG_HOME:-$XDG_CONFIG_HOME_DEFAULT}"
-SEEV_CONFIG_DIR="$XDG_ROOT/glin"
-SEEV_CONFIG_FILE="$SEEV_CONFIG_DIR/glin.toml"
+SEEV_CONFIG_DIR="$XDG_ROOT/seev"
+SEEV_CONFIG_FILE="$SEEV_CONFIG_DIR/seev.toml"
 
 # Create storage directory
 mkdir -p "$TARGET_DIR"
@@ -130,7 +139,7 @@ DB_PATH="$TARGET_DIR/$DB_NAME"
 
 # Create placeholder files if absent
 if [[ ! -e "$MD_PATH" ]]; then
-  echo "# Glin Worklog" > "$MD_PATH"
+  echo "# Seev Worklog" > "$MD_PATH"
   echo >> "$MD_PATH"
   echo "Initialized on $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$MD_PATH"
 fi
@@ -192,10 +201,10 @@ else
   REPOS_TOML='["owner/repo", "~/code/some/local/repo"]'
 fi
 
-# Write glin.toml
+# Write seev.toml
 cat > "$SEEV_CONFIG_FILE" <<TOML
-# Glin Configuration
-# This file was generated by glin-init.sh on $(date -u +%Y-%m-%dT%H:%M:%SZ)
+# Seev Configuration
+# This file was generated by seev-init.sh on $(date -u +%Y-%m-%dT%H:%M:%SZ)
 #
 # Emails to track when querying git history
 track_emails = $EMAILS_TOML
@@ -205,7 +214,7 @@ track_repositories = $REPOS_TOML
 
 # Paths to your local data files
 # You can override these at runtime via SEEV_DB_PATH and SEEV_MD_PATH
-# Note: ~ is accepted by Glin and will be expanded by your shell if you export
+# Note: ~ is accepted by Seev and will be expanded by your shell if you export
 #       the env vars directly.
 db_path = "${DB_PATH/#$HOME/~}"
 markdown_path = "${MD_PATH/#$HOME/~}"
