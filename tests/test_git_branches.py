@@ -112,7 +112,7 @@ def test_get_branch_commits_filtered(monkeypatch):
         )
     )
 
-    with patch("glin.git_tools.get_tracked_emails", return_value=["alice@example.com"]):
+    with patch("seev.git_tools.get_tracked_emails", return_value=["alice@example.com"]):
         monkeypatch.setattr(
             subprocess,
             "run",
@@ -182,7 +182,7 @@ def test_get_current_branch_with_workdir(monkeypatch):
     import subprocess
 
     # Force repo root resolution to a fixed path
-    monkeypatch.setattr("glin.git_tools.branches.resolve_repo_root", lambda p: {"path": "/repo"})
+    monkeypatch.setattr("seev.git_tools.branches.resolve_repo_root", lambda p: {"path": "/repo"})
 
     name = Completed(stdout="main\n")
     upstream = Completed(stdout="origin/main\n")
@@ -277,7 +277,7 @@ def test_list_branches_two(monkeypatch):
 def test_list_branches_with_workdir(monkeypatch):
     import subprocess
 
-    monkeypatch.setattr("glin.git_tools.branches.resolve_repo_root", lambda p: {"path": "/repo"})
+    monkeypatch.setattr("seev.git_tools.branches.resolve_repo_root", lambda p: {"path": "/repo"})
 
     fmt_lines = "\n".join(
         [
@@ -343,7 +343,7 @@ def test_get_branch_commits_filtered(monkeypatch):
         )
     )
 
-    with patch("glin.git_tools.get_tracked_emails", return_value=["alice@example.com"]):
+    with patch("seev.git_tools.get_tracked_emails", return_value=["alice@example.com"]):
         monkeypatch.setattr(
             subprocess,
             "run",
@@ -362,7 +362,7 @@ def test_get_branch_commits_with_workdir(monkeypatch):
     import subprocess
     from unittest.mock import patch
 
-    monkeypatch.setattr("glin.git_tools.commits.resolve_repo_root", lambda p: {"path": "/repo"})
+    monkeypatch.setattr("seev.git_tools.commits.resolve_repo_root", lambda p: {"path": "/repo"})
 
     log_ok = Completed(
         stdout=(
@@ -371,7 +371,7 @@ def test_get_branch_commits_with_workdir(monkeypatch):
         )
     )
 
-    with patch("glin.git_tools.get_tracked_emails", return_value=["alice@example.com"]):
+    with patch("seev.git_tools.get_tracked_emails", return_value=["alice@example.com"]):
         monkeypatch.setattr(
             subprocess,
             "run",

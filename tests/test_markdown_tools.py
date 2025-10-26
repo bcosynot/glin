@@ -45,7 +45,7 @@ def test_append_to_existing_heading_appends_below(tmp_path, monkeypatch):
     cwd = tmp_path
     monkeypatch.chdir(cwd)
 
-    monkeypatch.setattr(glin.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
 
     # First append creates file and heading
     res1 = append_to_markdown("a")
@@ -101,7 +101,7 @@ def test_normalizes_windows_newlines(tmp_path, monkeypatch):
 def test_handles_file_without_trailing_newline(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 
-    monkeypatch.setattr(glin.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
 
     # Create file without trailing newline
@@ -206,7 +206,7 @@ def test_mixed_empty_and_content_lines(tmp_path, monkeypatch):
 def test_inserts_heading_in_middle_of_document(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 
-    monkeypatch.setattr(glin.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
 
     # Create file with existing headings
@@ -235,7 +235,7 @@ def test_inserts_heading_in_middle_of_document(tmp_path, monkeypatch):
 def test_handles_file_ending_without_newline_edge_case(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 
-    monkeypatch.setattr(glin.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
 
     # Create file that doesn't end with newline and has content at the end
@@ -255,7 +255,7 @@ def test_handles_general_exception(tmp_path, monkeypatch):
     # Mock Path.write_text to raise an exception
     from unittest.mock import patch
 
-    with patch("glin.markdown_tools.Path.write_text") as mock_write:
+    with patch("seev.markdown_tools.Path.write_text") as mock_write:
         mock_write.side_effect = OSError("Disk full")
 
         res = append_to_markdown("test content")
@@ -266,7 +266,7 @@ def test_handles_general_exception(tmp_path, monkeypatch):
 def test_heading_fallback_when_missing_after_insert(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 
-    monkeypatch.setattr(glin.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
 
     # Create a scenario where heading might go missing (edge case)
@@ -582,7 +582,7 @@ def test_read_date_entry_uses_default_path(tmp_path, monkeypatch):
     """Test that read_date_entry uses get_markdown_path when no file_path provided."""
     monkeypatch.chdir(tmp_path)
 
-    monkeypatch.setattr(glin.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
     content = """## 2024-01-15
 
@@ -1131,7 +1131,7 @@ def test_append_to_markdown_update_mode_false(tmp_path, monkeypatch):
     """Test that update_mode=False uses traditional append behavior."""
     monkeypatch.chdir(tmp_path)
 
-    monkeypatch.setattr(glin.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
 
     # Create initial content
@@ -1158,7 +1158,7 @@ def test_append_to_markdown_update_mode_true_no_existing(tmp_path, monkeypatch):
     """Test update_mode=True when no existing entry exists (falls through to normal append)."""
     monkeypatch.chdir(tmp_path)
 
-    monkeypatch.setattr(glin.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
 
     # Create file without the target date
@@ -1193,7 +1193,7 @@ def test_append_to_markdown_update_mode_true_with_duplicates(tmp_path, monkeypat
     """Test update_mode=True deduplicates content."""
     monkeypatch.chdir(tmp_path)
 
-    monkeypatch.setattr(glin.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
 
     # Create initial content
@@ -1247,7 +1247,7 @@ def test_append_to_markdown_update_mode_preserves_other_dates(tmp_path, monkeypa
     """Test that update_mode only affects the target date."""
     monkeypatch.chdir(tmp_path)
 
-    monkeypatch.setattr(glin.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
 
     # Create content with multiple dates
@@ -1288,7 +1288,7 @@ def test_append_to_markdown_update_mode_metrics_replacement(tmp_path, monkeypatc
     """Test that metrics are replaced in update mode."""
     monkeypatch.chdir(tmp_path)
 
-    monkeypatch.setattr(glin.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
 
     # Create initial content with metrics
@@ -1323,7 +1323,7 @@ def test_append_to_markdown_update_mode_return_structure(tmp_path, monkeypatch):
     """Test that update_mode returns proper structure with merge stats."""
     monkeypatch.chdir(tmp_path)
 
-    monkeypatch.setattr(glin.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
 
     # Create initial content
@@ -1356,7 +1356,7 @@ def test_append_to_markdown_backward_compatibility(tmp_path, monkeypatch):
     """Test that default behavior (update_mode not specified) works as before."""
     monkeypatch.chdir(tmp_path)
 
-    monkeypatch.setattr(glin.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
     target = tmp_path / "WORKLOG.md"
 
     # Create initial content

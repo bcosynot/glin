@@ -84,7 +84,7 @@ def test_get_remote_origin_with_workdir(monkeypatch):
     import subprocess
 
     # Mock repo root resolution
-    monkeypatch.setattr("glin.git_tools.remotes.resolve_repo_root", lambda p: {"path": "/repo"})
+    monkeypatch.setattr("seev.git_tools.remotes.resolve_repo_root", lambda p: {"path": "/repo"})
 
     origin = Completed(stdout="https://github.com/org/repo.git\n")
     monkeypatch.setattr(

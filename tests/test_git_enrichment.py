@@ -14,7 +14,7 @@ def test_get_enriched_commits_forwards_info(monkeypatch):
         calls["workdir"] = workdir
         return [{"info": "No commits found in date range"}]
 
-    monkeypatch.setattr("glin.git_tools.enrichment.get_commits_by_date", fake_get_commits_by_date)
+    monkeypatch.setattr("seev.git_tools.enrichment.get_commits_by_date", fake_get_commits_by_date)
 
     res = get_enriched_commits("2025-01-01")
     assert isinstance(res, list)
@@ -27,7 +27,7 @@ def test_get_enriched_commits_forwards_error(monkeypatch):
     def fake_get_commits_by_date(since: str, until: str = "now", workdir: str | None = None):  # noqa: ARG001
         return [{"error": "repo root not found"}]
 
-    monkeypatch.setattr("glin.git_tools.enrichment.get_commits_by_date", fake_get_commits_by_date)
+    monkeypatch.setattr("seev.git_tools.enrichment.get_commits_by_date", fake_get_commits_by_date)
 
     res = get_enriched_commits("2025-01-01", workdir="/bad/path")
     assert isinstance(res, list)
@@ -61,10 +61,10 @@ def test_get_enriched_commits_success_with_workdir(monkeypatch):
     def fake_merge_info(commit_hash: str, workdir: str | None = None):  # noqa: ARG001
         return {"is_merge": False, "parents": [commit_hash]}
 
-    monkeypatch.setattr("glin.git_tools.enrichment.get_commits_by_date", fake_get_commits_by_date)
-    monkeypatch.setattr("glin.git_tools.enrichment.get_commit_statistics", fake_stats)
-    monkeypatch.setattr("glin.git_tools.enrichment.categorize_commit", fake_category)
-    monkeypatch.setattr("glin.git_tools.enrichment.detect_merge_info", fake_merge_info)
+    monkeypatch.setattr("seev.git_tools.enrichment.get_commits_by_date", fake_get_commits_by_date)
+    monkeypatch.setattr("seev.git_tools.enrichment.get_commit_statistics", fake_stats)
+    monkeypatch.setattr("seev.git_tools.enrichment.categorize_commit", fake_category)
+    monkeypatch.setattr("seev.git_tools.enrichment.detect_merge_info", fake_merge_info)
 
     res = get_enriched_commits("yesterday", "now", workdir="/work/repo")
     # Expect a structured EnrichedResult object
