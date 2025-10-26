@@ -716,9 +716,33 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
+  <a href="#slash-command-usage" class="md-nav__link">
     <span class="md-ellipsis">
-      Example
+      Slash command usage
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conversation_summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      conversation_summary
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="conversation_summary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#slash-command-usage_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Slash command usage
     </span>
   </a>
   
@@ -848,9 +872,33 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
+  <a href="#slash-command-usage" class="md-nav__link">
     <span class="md-ellipsis">
-      Example
+      Slash command usage
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conversation_summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      conversation_summary
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="conversation_summary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#slash-command-usage_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Slash command usage
     </span>
   </a>
   
@@ -902,19 +950,55 @@
 <li>Returns: list of messages like [{"role": "system"|"user", "content": "..."}] suitable for your LLM client.</li>
 <li>See code: seev.prompts.worklog_entry_prompt.</li>
 </ul>
-<h3 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h3>
-<p>Request (client-side pseudocode):</p>
-<div class="highlight"><pre><span></span><code>prompt = client.get_prompt(&quot;worklog_entry&quot;)
-messages = prompt.render(date=&quot;2025-10-25&quot;, inputs=&quot;Wrapped up feature X; reviewed PR #123&quot;)
-# Feed messages to your LLM and then let it call MCP tools per instructions.
-</code></pre></div>
-<p>Expected tool calls during execution (by your LLM agent):
+<h3 id="slash-command-usage">Slash command usage<a class="headerlink" href="#slash-command-usage" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Syntax: <code>/worklog_entry &lt;date&gt; [inputs]</code></li>
+<li>Positional arguments: <code>date</code> is required; <code>inputs</code> is optional.</li>
+<li>Quoting: wrap strings that contain spaces in quotes. Double or single quotes are both allowed.</li>
+<li>Spacing: use a single space between tokens.</li>
+</ul>
+<p>Examples (today is 2025-10-26):
+- <code>/worklog_entry 2025-10-25 "Wrapped up feature X; reviewed PR #123"</code>
+- <code>/worklog_entry "last 2 days" "Pair-programmed on the parser; validated caching behavior"</code>
+- <code>/worklog_entry 2025-10-20..2025-10-26</code></p>
+<p>Expected tool calls (handled by your assistant):
 - get_tracked_repositories_config
 - get_commits_by_date (per repo)
 - get_enriched_commits (optional)
 - get_recent_conversations
 - get_remote_origin → determine_commit_url_prefix
 - append_to_markdown (once per date)</p>
+<hr />
+<h2 id="conversation_summary">conversation_summary<a class="headerlink" href="#conversation_summary" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Purpose: Create a concise summary of the current task/conversation and persist it by calling the <code>record_conversation_summary</code> tool.</li>
+<li>Arguments:</li>
+<li>date (string, optional): ISO calendar date (YYYY-MM-DD). If omitted/blank, the server resolves it to today's local date when rendering the prompt.</li>
+<li>title (string, optional): Title used when creating a new conversation. If not provided and <code>conversation_id</code> is null, the LLM should derive a short title from the first sentence (&lt;= 80 chars, no newlines).</li>
+<li>conversation_id (integer, optional): Existing conversation id to append the summary to; when provided, <code>title</code> is ignored.</li>
+<li>inputs (string, optional): Notes, highlights, or raw text to base the summary on.</li>
+<li>Behavior highlights:</li>
+<li>The prompt instructs the LLM to write a brief summary (bullets or short sentences) emphasizing goals, key decisions, outcomes, blockers, and next steps.</li>
+<li>Immediately after writing the summary, the LLM must call <code>record_conversation_summary</code> with the resolved parameters, using the server-injected date to avoid ambiguity.</li>
+<li>Returns: list of messages like [{"role": "system"|"user", "content": "..."}] suitable for your LLM client.</li>
+<li>See code: seev.prompts.conversation_summary_prompt.</li>
+</ul>
+<h3 id="slash-command-usage_1">Slash command usage<a class="headerlink" href="#slash-command-usage_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Syntax: <code>/conversation_summary &lt;date|""&gt; &lt;title|""&gt; &lt;conversation_id|""&gt; &lt;inputs|""&gt;</code></li>
+<li>Positional arguments, left-to-right. You may omit trailing optional arguments entirely.</li>
+<li>Use an empty quoted string "" as a placeholder to skip an earlier argument (e.g., blank date means "use today").</li>
+<li>Quoting: wrap strings with spaces in quotes. Double or single quotes are both allowed.</li>
+<li>Spacing: use a single space between tokens.</li>
+</ul>
+<p>Examples (today is 2025-10-26):
+- <code>/conversation_summary "" "Cache rollout" "" "Finished caching layer; decided on Redis; add integration tests next"</code>
+- <code>/conversation_summary 2025-10-26 "Cache rollout" "" "Finished caching layer; decided on Redis; add integration tests next"</code>
+- <code>/conversation_summary 2025-10-26 "" 42 "Short update"</code></p>
+<p>Rules your assistant should follow (already encoded in the prompt):
+- Make exactly one tool call to <code>record_conversation_summary</code>.
+- If <code>conversation_id</code> is provided, ignore title derivation.
+- If both <code>conversation_id</code> and <code>title</code> are omitted (i.e., both placeholders are empty), derive a short title from the first sentence (≤ 80 chars).</p>
 
 
 
@@ -935,7 +1019,7 @@ messages = prompt.render(date=&quot;2025-10-25&quot;, inputs=&quot;Wrapped up fe
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 26, 2025 22:01:59 UTC">October 26, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 26, 2025 22:32:55 UTC">October 26, 2025</span>
   </span>
 
     
