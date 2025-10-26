@@ -24,9 +24,8 @@ Your worklog, without the work.
 
 Seev turns your real work—commits, PRs, and AI conversations—into a clean daily worklog. No copy‑pasting. No end‑of‑day scramble.
 
-### Your challenges → How Seev helps → What you get
 - Manual status updates steal time and are easy to forget.
-- Signal gets buried across repos, PRs, and chats.
+- Signals get buried across repos, PRs, and chats.
 - Reviews and performance cycles demand accurate histories.
 
 How Seev helps and what you get:
@@ -41,23 +40,13 @@ How Seev helps and what you get:
 
 Copy these into your terminal:
 
+#### 1. Setup the MCP and workspace
 ```bash
-# 1) Initialize a workspace (creates WORKLOG.md and config)
-curl -fsSL https://raw.githubusercontent.com/bcosynot/seev/main/seev-init.sh | bash -s -- -y ~/seev-workspace
+curl -fsSL https://raw.githubusercontent.com/bcosynot/seev/main/seev-init.sh | bash -s
 ```
 
-```bash
-# 2) Start the Seev MCP server (stdio)
-uvx --from git+https://github.com/bcosynot/seev.git seev
-```
-
-```bash
-# 3) (Optional) Run via HTTP on port 8000
-uv run python main.py -- --transport http
-```
-
+#### 2. Add a worklog entry
 ```text
-# 4) Ask your AI assistant
 /worklog_entry today
 ```
 
@@ -65,21 +54,7 @@ uv run python main.py -- --transport http
 
 ---
 
-## Highlights
-
-<div class="grid cards">
-
-- :material-rocket-launch: **Quick Start** — Get going in minutes. → [Guides](guides/index.md)
-- :material-git: **Git tools** — Commits, diffs, files, branches. → [Reference](reference/index.md)
-- :material-file-document: **Worklog writer** — Append structured entries safely. → [Troubleshooting](troubleshooting.md)
-- :material-shield-key: **Privacy & Data** — Local‑first by design. → [README section](https://github.com/bcosynot/seev#privacy--data)
-
-</div>
-
----
-
 ## Stay in the loop
 
 - Docs: [Guides](guides/index.md) · [Reference](reference/index.md)
 - GitHub: [bcosynot/seev](https://github.com/bcosynot/seev)
-- Privacy & Data: see [README → Privacy & Data](https://github.com/bcosynot/seev#privacy--data)
