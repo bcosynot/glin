@@ -64,6 +64,15 @@ EMAILS=""
 REPOS=""
 ASSUME_YES=0
 
+# Predeclare config status vars to avoid 'set -u' unbound variable errors
+JUNIE_CFG=""
+CURSOR_CFG=""
+VSCODE_CFG=""
+CLAUDE_CFG=""
+# Also predeclare instruction strings used when CLI setup fails or is unavailable
+VSCODE_INSTR=""
+CLAUDE_INSTR=""
+
 # Parse args
 ARGS=()
 while [[ $# -gt 0 ]]; do
