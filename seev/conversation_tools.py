@@ -11,46 +11,6 @@ from .storage.summaries import add_summary, list_summaries
 
 
 @mcp.tool(
-    name="record_conversation_message",
-    description=(
-        "[DEPRECATED] Record a message in a coding conversation. Prefer using "
-        "record_conversation_summary to persist summaries. If conversation_id is None, a new "
-        "conversation is created. Returns conversation_id and message_id."
-    ),
-)
-async def record_conversation_message(
-    role: str,
-    content: str,
-    conversation_id: int | None = None,
-    title: str | None = None,
-) -> dict[str, Any]:
-    """Record a conversation message into local storage.
-
-    Args:
-        role: Message role such as 'user', 'assistant', or 'system'.
-        content: Text content of the message.
-        conversation_id: Existing conversation id; if omitted, a new conversation is created.
-        title: Optional title used when creating a new conversation.
-
-    Returns:
-        Dict containing ids and small echo metadata.
-    """
-    if conversation_id is None:
-        conversation_id = add_conversation(title=title)
-
-    message_id = add_message(conversation_id, role, content)
-
-    return {
-        "conversation_id": int(conversation_id),
-        "message_id": int(message_id),
-        "role": role,
-        "content_length": len(content),
-        "title": title,
-        "created_new_conversation": title is not None,
-    }
-
-
-@mcp.tool(
     name="record_conversation_summary",
     description=(
         "Record a summary row for a conversation on a given date. If conversation_id is None, "

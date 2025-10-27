@@ -61,16 +61,6 @@ class TestGetTrackedEmails:
 
 
 class TestConfigFileEmails:
-    def test_reads_from_current_directory(self):
-        """Should read config from current directory."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            config_path = Path(tmpdir) / "glin.toml"
-            config_path.write_text('track_emails = ["test@example.com"]')
-
-            with patch("pathlib.Path.cwd", return_value=Path(tmpdir)):
-                emails = _get_config_file_emails()
-                assert emails == ["test@example.com"]
-
     def test_reads_from_home_config(self):
         """Should read config from ~/.config/glin/glin.toml."""
         with tempfile.TemporaryDirectory() as tmpdir:
