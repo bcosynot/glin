@@ -32,19 +32,6 @@ No manual logging. No "what did I even do today?" moments. Seev captures your fl
 
 ```bash
 # Replace <OWNER>/<REPO> with your GitHub org/repo (branch: main)
-curl -fsSL https://raw.githubusercontent.com/bcosynot/seev/main/seev-init.sh | bash -s -- -y ~/seev-workspace
-```
-
-Examples with options:
-
-```bash
-# Specify emails and repositories to track
-curl -fsSL https://raw.githubusercontent.com/bcosynot/seev/main/seev-init.sh \
-  | bash -s -- -y \
-      -e "me@ex.com,me@work.com" \
-      -r "owner/repo,~/code/another-repo" \
-      -m WORKLOG.md -d seev.sqlite3 \
-      ~/seev-workspace
 ```
 
 What the script does:
@@ -52,35 +39,12 @@ What the script does:
 - Writes `WORKLOG.md` and `seev.sqlite3` (customizable via `-m`/`-d`)
 - Generates/updates `~/.config/seev/seev.toml` (backs up existing with a timestamp)
 - Respects env overrides at runtime: `SEEV_DB_PATH`, `SEEV_MD_PATH`, `SEEV_TRACK_EMAILS`, `SEEV_TRACK_REPOSITORIES`
-
-Security tips:
-- Always inspect scripts before piping to `bash`:
-    - `curl -fsSL https://raw.githubusercontent.com/<OWNER>/<REPO>/main/seev-init.sh -o /tmp/seev-init.sh && less /tmp/seev-init.sh`
-    - `bash /tmp/seev-init.sh -h` to view help
-- The script supports interactive prompts by default; use `-y` to accept defaults.
+- Adds Seev to your AI assistant (see bellow to configure manuall)
 
 
 ### 2. Add Seev to Your AI Coding Assistant
 
 Seev works with any MCP-compatible client. Here's how to set it up:
-
-#### Claude Desktop
-
-Add to your Claude Desktop config file:
-
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`  
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-```json
-{
-  "mcpServers": {
-    "seev": {
-      "command": "uvx",
-      "args": ["--from", "git+https://github.com/bcosynot/seev.git", "seev"]
-    }
-  }
-}
-```
 
 #### Cursor
 
@@ -100,19 +64,33 @@ Add to Cursor's MCP settings file:
 }
 ```
 
-#### Cline (VS Code Extension)
+#### Claude Code
 
 Add to Cline's MCP settings in VS Code settings:
 
+```bash
+claude mcp add --transport stdio --scope user --name seev -- uvx --from git+https://github.com/bcosynot/seev.git seev
+```
+
+#### Junie
+
+Add this to `~/.junie/mcp.json`:
+
 ```json
 {
-  "cline.mcpServers": {
+  "mcpServers": {
     "seev": {
       "command": "uvx",
       "args": ["--from", "git+https://github.com/bcosynot/seev.git", "seev"]
     }
   }
 }
+```
+
+#### VS Code
+
+```bash
+code --add-mcp "{\"name\":\"seev\",\"command\": \"uvx\",\"args\": [\"--from\", \"git+https://github.com/bcosynot/seev.git\", \"seev\"]}"
 ```
 
 **Note**: After updating your config, restart your AI assistant to load the Seev MCP server.
