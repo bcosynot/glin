@@ -2759,12 +2759,17 @@ This section is generated via mkdocstrings for the core Python APIs. Use the pag
 
         <p>Append content under a date heading in a markdown file.</p>
 <p>Behavior:
-- Default (preserve_lines=False): Each non-empty input line becomes a markdown bullet ("- ...").
-- Raw mode (preserve_lines=True): Lines are written as-is (no automatic bullet prefix). Useful for writing headings like "### Goals".
-- Update mode (update_mode=True): Read existing entry for the date and merge new content with existing sections instead of appending.
-- Ensures a heading for the specified date ("## YYYY-MM-DD"). If no date is provided, uses the current local date. Creates it if missing.
+- Default (preserve_lines=False): Each non-empty input line becomes a markdown bullet
+  ("- ...").
+- Raw mode (preserve_lines=True): Lines are written as-is (no automatic bullet prefix).
+  Useful for writing headings like "### Goals".
+- Update mode (update_mode=True): Read existing entry for the date and merge new content
+  with existing sections instead of appending.
+- Ensures a heading for the specified date ("## YYYY-MM-DD"). If no date is provided, uses
+  the current local date. Creates it if missing.
 - Appends content under the chosen date's heading, before the next heading or at the end.
-- Path resolution: file_path argument &gt; SEEV_MD_PATH env var &gt; seev.toml <code>markdown_path</code> (with glin.toml fallback) &gt; ./WORKLOG.md.</p>
+- Path resolution: file_path argument &gt; SEEV_MD_PATH env var &gt; seev.toml <code>markdown_path</code>
+  (with glin.toml fallback) &gt; ./WORKLOG.md.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2787,7 +2792,8 @@ This section is generated via mkdocstrings for the core Python APIs. Use the pag
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The text to append. Must be non-empty (after stripping). Newlines will be normalized.</p>
+                <p>The text to append. Must be non-empty (after stripping). Newlines will be
+normalized.</p>
               </div>
             </td>
             <td>
@@ -2819,7 +2825,8 @@ This section is generated via mkdocstrings for the core Python APIs. Use the pag
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Optional date string in ISO format (YYYY-MM-DD). When provided, content is added under this date's heading instead of today's.</p>
+                <p>Optional date string in ISO format (YYYY-MM-DD). When provided, content is
+added under this date's heading instead of today's.</p>
               </div>
             </td>
             <td>
@@ -2835,7 +2842,8 @@ This section is generated via mkdocstrings for the core Python APIs. Use the pag
             </td>
             <td>
               <div class="doc-md-description">
-                <p>When True, write lines as-is; when False, prefix each non-empty line with "- ".</p>
+                <p>When True, write lines as-is; when False, prefix each non-empty line
+with "- ".</p>
               </div>
             </td>
             <td>
@@ -2851,8 +2859,9 @@ This section is generated via mkdocstrings for the core Python APIs. Use the pag
             </td>
             <td>
               <div class="doc-md-description">
-                <p>When True, read existing entry for the date and merge new content with existing sections instead of appending.
-         When False (default), append as before (backward compatible).</p>
+                <p>When True, read existing entry for the date and merge new content with
+existing sections instead of appending. When False (default), append as before
+(backward compatible).</p>
               </div>
             </td>
             <td>
@@ -2878,7 +2887,17 @@ This section is generated via mkdocstrings for the core Python APIs. Use the pag
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A dict with operation details or an error message, including the exact content and line numbers added.</p>
+                <p>A dict with operation details or an error message, including the exact content and</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="MarkdownSuccessResponse (seev.markdown_tools.MarkdownSuccessResponse)" href="#seev.markdown_tools.MarkdownSuccessResponse">MarkdownSuccessResponse</a> | <a class="autorefs autorefs-internal" title="MarkdownErrorResponse (seev.markdown_tools.MarkdownErrorResponse)" href="#seev.markdown_tools.MarkdownErrorResponse">MarkdownErrorResponse</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>line numbers added.</p>
               </div>
             </td>
           </tr>
@@ -3178,7 +3197,22 @@ This section is generated via mkdocstrings for the core Python APIs. Use the pag
 <span class="normal">813</span>
 <span class="normal">814</span>
 <span class="normal">815</span>
-<span class="normal">816</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">append_to_markdown</span><span class="p">(</span>
+<span class="normal">816</span>
+<span class="normal">817</span>
+<span class="normal">818</span>
+<span class="normal">819</span>
+<span class="normal">820</span>
+<span class="normal">821</span>
+<span class="normal">822</span>
+<span class="normal">823</span>
+<span class="normal">824</span>
+<span class="normal">825</span>
+<span class="normal">826</span>
+<span class="normal">827</span>
+<span class="normal">828</span>
+<span class="normal">829</span>
+<span class="normal">830</span>
+<span class="normal">831</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">append_to_markdown</span><span class="p">(</span>
     <span class="n">content</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">date_str</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -3190,23 +3224,33 @@ This section is generated via mkdocstrings for the core Python APIs. Use the pag
 <span class="sd">    Append content under a date heading in a markdown file.</span>
 
 <span class="sd">    Behavior:</span>
-<span class="sd">    - Default (preserve_lines=False): Each non-empty input line becomes a markdown bullet (&quot;- ...&quot;).</span>
-<span class="sd">    - Raw mode (preserve_lines=True): Lines are written as-is (no automatic bullet prefix). Useful for writing headings like &quot;### Goals&quot;.</span>
-<span class="sd">    - Update mode (update_mode=True): Read existing entry for the date and merge new content with existing sections instead of appending.</span>
-<span class="sd">    - Ensures a heading for the specified date (&quot;## YYYY-MM-DD&quot;). If no date is provided, uses the current local date. Creates it if missing.</span>
+<span class="sd">    - Default (preserve_lines=False): Each non-empty input line becomes a markdown bullet</span>
+<span class="sd">      (&quot;- ...&quot;).</span>
+<span class="sd">    - Raw mode (preserve_lines=True): Lines are written as-is (no automatic bullet prefix).</span>
+<span class="sd">      Useful for writing headings like &quot;### Goals&quot;.</span>
+<span class="sd">    - Update mode (update_mode=True): Read existing entry for the date and merge new content</span>
+<span class="sd">      with existing sections instead of appending.</span>
+<span class="sd">    - Ensures a heading for the specified date (&quot;## YYYY-MM-DD&quot;). If no date is provided, uses</span>
+<span class="sd">      the current local date. Creates it if missing.</span>
 <span class="sd">    - Appends content under the chosen date&#39;s heading, before the next heading or at the end.</span>
-<span class="sd">    - Path resolution: file_path argument &gt; SEEV_MD_PATH env var &gt; seev.toml `markdown_path` (with glin.toml fallback) &gt; ./WORKLOG.md.</span>
+<span class="sd">    - Path resolution: file_path argument &gt; SEEV_MD_PATH env var &gt; seev.toml `markdown_path`</span>
+<span class="sd">      (with glin.toml fallback) &gt; ./WORKLOG.md.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        content: The text to append. Must be non-empty (after stripping). Newlines will be normalized.</span>
+<span class="sd">        content: The text to append. Must be non-empty (after stripping). Newlines will be</span>
+<span class="sd">            normalized.</span>
 <span class="sd">        file_path: Optional target file path. Can be absolute or relative to the repo root.</span>
-<span class="sd">        date_str: Optional date string in ISO format (YYYY-MM-DD). When provided, content is added under this date&#39;s heading instead of today&#39;s.</span>
-<span class="sd">        preserve_lines: When True, write lines as-is; when False, prefix each non-empty line with &quot;- &quot;.</span>
-<span class="sd">        update_mode: When True, read existing entry for the date and merge new content with existing sections instead of appending.</span>
-<span class="sd">                     When False (default), append as before (backward compatible).</span>
+<span class="sd">        date_str: Optional date string in ISO format (YYYY-MM-DD). When provided, content is</span>
+<span class="sd">            added under this date&#39;s heading instead of today&#39;s.</span>
+<span class="sd">        preserve_lines: When True, write lines as-is; when False, prefix each non-empty line</span>
+<span class="sd">            with &quot;- &quot;.</span>
+<span class="sd">        update_mode: When True, read existing entry for the date and merge new content with</span>
+<span class="sd">            existing sections instead of appending. When False (default), append as before</span>
+<span class="sd">            (backward compatible).</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        A dict with operation details or an error message, including the exact content and line numbers added.</span>
+<span class="sd">        A dict with operation details or an error message, including the exact content and</span>
+<span class="sd">        line numbers added.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">content</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">content</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
@@ -3285,7 +3329,8 @@ This section is generated via mkdocstrings for the core Python APIs. Use the pag
                             <span class="n">end_idx</span> <span class="o">=</span> <span class="n">i</span>
                             <span class="k">break</span>
 
-                    <span class="c1"># Replace the section content (keep heading, replace everything until next heading)</span>
+                    <span class="c1"># Replace the section content (keep heading, replace content</span>
+                    <span class="c1"># until the next heading)</span>
                     <span class="n">merged_lines</span> <span class="o">=</span> <span class="n">merged_content</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
                     <span class="c1"># Remove leading empty line if present (we&#39;ll add proper spacing)</span>
                     <span class="k">while</span> <span class="n">merged_lines</span> <span class="ow">and</span> <span class="n">merged_lines</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
@@ -3409,7 +3454,8 @@ This section is generated via mkdocstrings for the core Python APIs. Use the pag
 
         <span class="c1"># Build the new section content to insert</span>
         <span class="n">insert_block</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="c1"># Ensure there is a blank line after heading if immediate next line isn&#39;t blank and we&#39;re inserting directly</span>
+        <span class="c1"># Ensure there is a blank line after heading if the next line isn&#39;t blank</span>
+        <span class="c1"># and we&#39;re inserting directly</span>
         <span class="n">after_heading_idx</span> <span class="o">=</span> <span class="n">heading_idx</span> <span class="o">+</span> <span class="mi">1</span>
         <span class="k">if</span> <span class="n">after_heading_idx</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">doc_lines</span><span class="p">)</span> <span class="ow">or</span> <span class="n">doc_lines</span><span class="p">[</span><span class="n">after_heading_idx</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
             <span class="n">insert_block</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
@@ -3431,12 +3477,15 @@ This section is generated via mkdocstrings for the core Python APIs. Use the pag
             <span class="n">k</span> <span class="o">=</span> <span class="n">bullets_offset_in_block</span> <span class="o">+</span> <span class="n">idx</span>
             <span class="n">bullet_line_numbers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">insert_pos</span> <span class="o">+</span> <span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
 
-        <span class="c1"># If we created the heading in this call, compute its 1-based line number in the final document</span>
+        <span class="c1"># If we created the heading in this call, compute its 1-based line number</span>
+        <span class="c1"># in the final document</span>
         <span class="n">heading_added</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">heading_exists</span>
         <span class="n">heading_line_number</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">heading_added</span><span class="p">:</span>
-            <span class="c1"># Heading line is at heading_idx (recomputed above) in doc_lines BEFORE inserting insert_block</span>
-            <span class="c1"># Since we haven&#39;t yet inserted insert_block, its final 1-based line number is heading_idx + 1</span>
+            <span class="c1"># Heading line is at heading_idx (recomputed above) in doc_lines</span>
+            <span class="c1"># BEFORE inserting insert_block</span>
+            <span class="c1"># Since we haven&#39;t yet inserted insert_block, its final 1-based line</span>
+            <span class="c1"># number is heading_idx + 1</span>
             <span class="n">heading_line_number</span> <span class="o">=</span> <span class="n">heading_idx</span> <span class="o">+</span> <span class="mi">1</span>
 
         <span class="c1"># Insert bullets block</span>
@@ -4549,8 +4598,7 @@ This section is generated via mkdocstrings for the core Python APIs. Use the pag
 
             <details class="quote">
               <summary>Source code in <code>seev/git_tools/remotes.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 78</span>
-<span class="normal"> 79</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 79</span>
 <span class="normal"> 80</span>
 <span class="normal"> 81</span>
 <span class="normal"> 82</span>
@@ -4609,7 +4657,8 @@ This section is generated via mkdocstrings for the core Python APIs. Use the pag
 <span class="normal">135</span>
 <span class="normal">136</span>
 <span class="normal">137</span>
-<span class="normal">138</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">determine_commit_url_prefix</span><span class="p">(</span><span class="n">remote_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CommitUrlPrefixResult</span><span class="p">:</span>
+<span class="normal">138</span>
+<span class="normal">139</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">determine_commit_url_prefix</span><span class="p">(</span><span class="n">remote_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CommitUrlPrefixResult</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Given a Git remote URL, derive the HTTPS commit URL prefix for common hosts.</span>
 
@@ -5791,7 +5840,7 @@ when enrichment returns an error/info payload.</p>
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 27, 2025 02:05:04 UTC">October 27, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 27, 2025 02:45:16 UTC">October 27, 2025</span>
   </span>
 
     
