@@ -263,9 +263,10 @@ async def _tool_get_recent_commits(
         str | None,
         Field(
             description=(
-                "Optional working directory for Git operations. When set, Git runs in the repository "
-                "containing this path using 'git -C <root>', ensuring commands execute in the client's "
-                "project repository rather than the server process CWD."
+                "Optional working directory for Git operations. "
+                "When set, Git runs in the repository "
+                "containing this path using 'git -C <root>', ensuring commands "
+                "execute in the client's project repository rather than the server process CWD."
             )
         ),
     ] = None,
@@ -342,7 +343,6 @@ async def _tool_get_recent_commits(
         else:
             # Detect config gap or empty results/errors
             error_entries = [r for r in result if isinstance(r, dict) and "error" in r]
-            info_entries = [r for r in result if isinstance(r, dict) and "info" in r]
             if error_entries:
                 # Truncate error detail to avoid large payloads
                 msg = str(error_entries[0].get("error", ""))
@@ -389,9 +389,10 @@ async def _tool_get_commits_by_date(
         str | None,
         Field(
             description=(
-                "Optional working directory for Git operations. When set, Git runs in the repository "
-                "containing this path using 'git -C <root>', ensuring commands execute in the client's "
-                "project repository rather than the server process CWD."
+                "Optional working directory for Git operations. "
+                "When set, Git runs in the repository "
+                "containing this path using 'git -C <root>', ensuring commands "
+                "execute in the client's project repository rather than the server process CWD."
             )
         ),
     ] = None,
@@ -513,9 +514,10 @@ async def _tool_get_branch_commits(
         str | None,
         Field(
             description=(
-                "Optional working directory for Git operations. When set, Git runs in the repository "
-                "containing this path using 'git -C <root>', ensuring commands execute in the client's "
-                "project repository rather than the server process CWD."
+                "Optional working directory for Git operations. "
+                "When set, Git runs in the repository "
+                "containing this path using 'git -C <root>', ensuring commands "
+                "execute in the client's project repository rather than the server process CWD."
             )
         ),
     ] = None,

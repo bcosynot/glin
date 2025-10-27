@@ -118,9 +118,10 @@ async def _tool_get_enriched_commits(
         str | None,
         Field(
             description=(
-                "Optional working directory for Git operations. When set, Git runs in the repository "
-                "containing this path using 'git -C <root>', ensuring commands execute in the client's "
-                "project repository rather than the server process CWD."
+                "Optional working directory for Git operations. When set, Git runs in the "
+                "repository containing this path using 'git -C <root>', ensuring commands "
+                "execute in the client's project repository "
+                "rather than the server process CWD."
             )
         ),
     ] = None,

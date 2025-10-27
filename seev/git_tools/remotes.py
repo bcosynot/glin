@@ -52,7 +52,8 @@ def get_remote_origin(workdir: str | None = None) -> RemoteInfo:
 @mcp.tool(
     name="get_remote_origin",
     description=(
-        "Get the current repository's remote named 'origin' (if configured). Returns its URL or an error."
+        "Get the current repository's remote named 'origin' (if configured). "
+        "Returns its URL or an error."
     ),
 )
 def _tool_get_remote_origin(
@@ -60,9 +61,9 @@ def _tool_get_remote_origin(
         str | None,
         Field(
             description=(
-                "Optional working directory for Git operations. When set, Git runs in the repository "
-                "containing this path using 'git -C <root>', ensuring commands execute in the client's "
-                "project repository rather than the server process CWD."
+                "Optional working directory for Git operations. When set, Git runs in the "
+                "repository containing this path using 'git -C <root>', ensuring commands "
+                "execute in the client's project repository rather than the server process CWD."
             )
         ),
     ] = None,

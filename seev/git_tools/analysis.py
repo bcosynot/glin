@@ -347,7 +347,8 @@ def blame_file(
 @mcp.tool(
     name="detect_merge_info",
     description=(
-        "Detect whether a commit is a merge and whether it looks like a PR merge. Returns parents, flags and PR number if available."
+        "Detect whether a commit is a merge and whether it looks like a PR merge. "
+        "Returns parents, flags and PR number if available."
     ),
 )
 def _tool_detect_merge_info(
@@ -357,7 +358,8 @@ def _tool_detect_merge_info(
         Field(
             description=(
                 "Required working directory path. Git runs in the repository containing this path "
-                "using 'git -C <root>', ensuring commands execute in the client's project repository "
+                "using 'git -C <root>', ensuring commands "
+                "execute in the client's project repository "
                 "rather than the server process CWD. The path must reside inside a Git repository."
             )
         ),
@@ -374,7 +376,8 @@ def _tool_detect_merge_info(
 @mcp.tool(
     name="get_commit_statistics",
     description=(
-        "Get aggregate statistics for a commit (additions, deletions, files changed) with a simple language breakdown."
+        "Get aggregate statistics for a commit (additions, deletions, files changed) "
+        "with a simple language breakdown."
     ),
 )
 def _tool_get_commit_statistics(
@@ -384,7 +387,8 @@ def _tool_get_commit_statistics(
         Field(
             description=(
                 "Required working directory path. Git runs in the repository containing this path "
-                "using 'git -C <root>', ensuring commands execute in the client's project repository "
+                "using 'git -C <root>', ensuring commands "
+                "execute in the client's project repository "
                 "rather than the server process CWD. The path must reside inside a Git repository."
             )
         ),
@@ -401,7 +405,8 @@ def _tool_get_commit_statistics(
 @mcp.tool(
     name="categorize_commit",
     description=(
-        "Categorize a commit message per Conventional Commits. Pass a commit hash with is_hash=True to resolve subject from git."
+        "Categorize a commit message per Conventional Commits. "
+        "Pass a commit hash with is_hash=True to resolve subject from git."
     ),
 )
 def _tool_categorize_commit(
@@ -411,7 +416,8 @@ def _tool_categorize_commit(
         Field(
             description=(
                 "Required working directory path. Git runs in the repository containing this path "
-                "using 'git -C <root>', ensuring commands execute in the client's project repository "
+                "using 'git -C <root>', ensuring commands "
+                "execute in the client's project repository "
                 "rather than the server process CWD. The path must reside inside a Git repository."
             )
         ),
@@ -439,7 +445,8 @@ def _tool_git_blame(
         Field(
             description=(
                 "Required working directory path. Git runs in the repository containing this path "
-                "using 'git -C <root>', ensuring commands execute in the client's project repository "
+                "using 'git -C <root>', ensuring commands "
+                "execute in the client's project repository "
                 "rather than the server process CWD. The path must reside inside a Git repository."
             )
         ),

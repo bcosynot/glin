@@ -49,7 +49,8 @@ def get_commit_diff(commit_hash: str, context_lines: int = 3, workdir: str | Non
     name="get_commit_diff",
     description=(
         "Get the diff (code changes) for a specific commit. Returns commit metadata along with the "
-        "full diff and file statistics. Optionally specify the number of context lines around changes."
+        "full diff and file statistics. Optionally specify the number of context lines around "
+        "changes."
     ),
 )
 def _tool_get_commit_diff(
@@ -59,7 +60,8 @@ def _tool_get_commit_diff(
         Field(
             description=(
                 "Required working directory path. Git runs in the repository containing this path "
-                "using 'git -C <root>', ensuring commands execute in the client's project repository "
+                "using 'git -C <root>', ensuring commands "
+                "execute in the client's project repository "
                 "rather than the server process CWD. The path must reside inside a Git repository."
             )
         ),

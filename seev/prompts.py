@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """
 Server-side prompt templates for LLM use via FastMCP Prompts API.
 
@@ -42,13 +43,20 @@ def _system_header(title: str) -> str:
     name="worklog_entry",
     description=(
         "Generate a worklog entry for a given date or period. If tool-calling is "
-        "available, first gather commits, conversations, PR details, enrichment, and optional heatmap for the period "
-        "using appropriate MCP tools. Correlate commits with any recorded conversations for the same period and include those correlations in the entry "
-        "(e.g., note which conversation a commit implements). When merge commits reference GitHub pull requests (e.g., "
-        "'#123' or 'Merge pull request #123'), use the GitHub MCP 'pull_requests' toolset to fetch key PR details (title, author, state/merged, URL) and include them. "
-        "Then produce a structured markdown yourself with sections: 🎯 Goals & Context, 💻 Technical Work, 📊 Metrics, 🔍 Key Decisions, ⚠️ Impact Assessment, 🚧 Open Items, 📚 Learnings. "
-        "Finally, if the worklog file contains any entry dated after a given Sunday, synthesize and append a Weekly Summary for the Monday..Sunday window ending on that Sunday. "
-        "Do not call the 'generate_rich_worklog' tool; instead, synthesize these sections directly from the gathered data."
+        "available, first gather commits, conversations, PR details, enrichment, "
+        "and optional heatmap for the period using appropriate MCP tools. "
+        "Correlate commits with any recorded conversations for the same period and "
+        "include those correlations in the entry (e.g., note which conversation a "
+        "commit implements). When merge commits reference GitHub pull requests (e.g., "
+        "'#123' or 'Merge pull request #123'), use the GitHub MCP 'pull_requests' "
+        "toolset to fetch key PR details (title, author, state/merged, URL) and "
+        "include them. Then produce a structured markdown yourself with sections: "
+        "🎯 Goals & Context, 💻 Technical Work, 📊 Metrics, 🔍 Key Decisions, ⚠️ Impact "
+        "Assessment, 🚧 Open Items, 📚 Learnings. Finally, if the worklog file contains "
+        "any entry dated after a given Sunday, synthesize and append a Weekly Summary "
+        "for the Monday..Sunday window ending on that Sunday. Do not call the "
+        "'generate_rich_worklog' tool; instead, synthesize these sections directly "
+        "from the gathered data."
     ),
     tags=["worklog", "summary", "daily", "git", "commits"],
 )
