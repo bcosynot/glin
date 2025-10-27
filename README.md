@@ -1,438 +1,130 @@
-# **Seev**
-*Your worklog, without the work.*
+# Seev — Your worklog, without the work
+
+Seev turns your real work—commits, PRs, and AI conversations—into a clean daily worklog. No copy‑pasting. No end‑of‑day scramble. Privacy‑first and local by default.
+
+[Docs →](docs/index.md) · [Guides →](docs/guides/index.md) · [Troubleshooting →](docs/troubleshooting.md)
 
 ---
 
-## Why Seev?
+## Why Seev
 
-As an experienced developer, you know the drill: daily standups, sprint updates, performance reviews, knowledge transfer. 
-You spend hours *doing* the work, but documenting it? That's where the friction starts.
-
-**Seev solves this.** It's an [MCP server](https://modelcontextprotocol.io/) that automatically builds your worklog from tools you're already using:
-
-- **Your git commits** — the actual code changes you makey
-- **Pull requests** — PRs you authored and reviewed
-- **Your AI assistant conversations** — the context, decisions, and problem-solving
-
-No manual logging. No "what did I even do today?" moments. Seev captures your flow of work transparently and turns it into clean, searchable records.
-
-### What You Get
-
-- **Automatic work capture**: Your commits and AI conversations become structured worklog entries
-- **Rich context**: Correlates commits with conversations, PRs, and issues
-- **Structured summaries**: Goals, technical work, metrics, decisions, impact, learnings
-- **Privacy-first**: Everything stays local. You control what gets logged and shared
-- **MCP-native**: Works with any AI assistant that supports MCP (Claude Desktop, Cursor, Junie, Cline, etc.)
+- Automatically captures commits, PRs, and AI assistant conversations
+- Generates structured, readable worklog entries (goals, work, metrics, decisions, impact, todo, learnings)
+- MCP‑native: works with Claude Desktop, Cursor, Junie, Cline, and other MCP clients
+- Local‑first: you control what’s logged and where it’s stored
 
 ---
 
 ## Quick Start
 
-#### 1. Initialize via shell script
+Copy this into your terminal to set up Seev and a local workspace:
 
 ```bash
-# Replace <OWNER>/<REPO> with your GitHub org/repo (branch: main)
+curl -fsSL https://raw.githubusercontent.com/bcosynot/seev/main/seev-init.sh | bash -s
 ```
 
-What the script does:
-- Creates the target directory (e.g., `~/seev-workspace`) if needed
-- Writes `WORKLOG.md` and `seev.sqlite3` (customizable via `-m`/`-d`)
-- Generates/updates `~/.config/seev/seev.toml` (backs up existing with a timestamp)
-- Respects env overrides at runtime: `SEEV_DB_PATH`, `SEEV_MD_PATH`, `SEEV_TRACK_EMAILS`, `SEEV_TRACK_REPOSITORIES`
-- Adds Seev to your AI assistant (see bellow to configure manuall)
+Then restart your MCP client so it can load the Seev server.
 
+Add your first entry from your AI assistant by sending:
 
-### 2. Add Seev to Your AI Coding Assistant
-
-Seev works with any MCP-compatible client. Here's how to set it up:
-
-#### Cursor
-
-Add to Cursor's MCP settings file:
-
-**macOS/Linux**: `~/.cursor/mcp.json`  
-**Windows**: `%USERPROFILE%\.cursor\mcp.json`
-
-```json
-{
-  "mcpServers": {
-    "seev": {
-      "command": "uvx",
-      "args": ["--from", "git+https://github.com/bcosynot/seev.git", "seev"]
-    }
-  }
-}
+```text
+/worklog_entry today
 ```
 
-#### Claude Code
-
-Add to Cline's MCP settings in VS Code settings:
-
-```bash
-claude mcp add --transport stdio --scope user --name seev -- uvx --from git+https://github.com/bcosynot/seev.git seev
-```
-
-#### Junie
-
-Add this to `~/.junie/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "seev": {
-      "command": "uvx",
-      "args": ["--from", "git+https://github.com/bcosynot/seev.git", "seev"]
-    }
-  }
-}
-```
-
-#### VS Code
-
-```bash
-code --add-mcp "{\"name\":\"seev\",\"command\": \"uvx\",\"args\": [\"--from\", \"git+https://github.com/bcosynot/seev.git\", \"seev\"]}"
-```
-
-**Note**: After updating your config, restart your AI assistant to load the Seev MCP server.
+More examples and details are in Guides → Quick Start: docs/guides/quick-start.md
 
 ---
 
-### 3. Generate Your First Worklog Entry
+## Works with your MCP client
 
-Now the magic happens. Ask your AI assistant to create a worklog entry:
+Seev is an MCP server and runs alongside your editor/assistant. For client‑specific setup (Cursor, Claude Desktop/Cline, Junie, VS Code, etc.), see:
 
-**Simple daily entry:**
+- Guides → MCP clients: docs/guides/mcp-clients.md
 
-> "/worklog_entry today"
+---
 
-**Specific date:**
+## Configuration (essentials)
 
-> "/worklog_entry 2025-10-20"
+The init script creates a workspace and a config file you can edit later:
 
-**Date range:**
+- Worklog file: WORKLOG.md
+- Database: db.sqlite3
+- Config file: ~/.config/seev/seev.toml
 
-> "/worklog_entry last week"
+Track which commits are yours by listing your emails in the config:
 
-**What your AI assistant does:**
+```toml
+# ~/.config/seev/seev.toml
+track_emails = ["you@work.com", "you@personal.com", "yourgithubhandle@users.noreply.github.com"]
+```
 
-1. **Gathers context** using Seev's MCP tools:
-   - Fetches your git commits for the period
-   - Retrieves conversation history
-   - Collects PR and issue activity (if GitHub MCP is available)
-   - Calculates code metrics (additions, deletions, files changed)
+Environment variables can override paths and email tracking at runtime. See Guides → Workspace & Configuration: docs/guides/workspace-and-configuration.md
 
-2. **Correlates data**:
-   - Matches commits to conversations
-   - Links PRs to commits
-   - Identifies merge commits and branch activity
+---
 
-3. **Generates structured markdown** with sections:
-   - 🎯 **Goals & Context**: What you set out to do
-   - 💻 **Technical Work**: Commits, PRs, reviews
-   - 📊 **Metrics**: Commit counts, code changes, files touched
-   - 🔍 **Key Decisions**: Important choices and rationale
-   - ⚠️ **Impact Assessment**: Risks, dependencies, compatibility
-   - 🚧 **Open Items**: TODOs, blockers, follow-ups
-   - 📚 **Learnings**: Insights, patterns, gotchas
-
-4. **Saves to WORKLOG.md** automatically under the date heading
-
-**Example worklog entry:**
+## What a worklog entry looks like
 
 ```markdown
 ## 2025-10-22
 
 ### 🎯 Goals & Context
 - Refactor authentication module to support OAuth2 providers
-- Fix critical bug in payment flow causing transaction failures
-- Review team PRs for the dashboard redesign
 
 ### 💻 Technical Work
-- [abc123f](https://github.com/org/repo/commit/abc123f) Refactor: Extract OAuth2 provider interface
-- [def456a](https://github.com/org/repo/commit/def456a) Fix: Handle null payment tokens in checkout flow
-- [ghi789b](https://github.com/org/repo/commit/ghi789b) Test: Add integration tests for OAuth2 flows
-- Reviewed PR #234: Dashboard UI components (approved with suggestions)
+- abc1234: Extract OAuth2 provider interface
 
 ### 📊 Metrics
-- Total commits: 3
-- Additions: +245, Deletions: -89
-- Files changed: 8 (Python: 6, TypeScript: 2)
-- PRs reviewed: 1
+- Total commits: 3; Files changed: 8
 
 ### 🔍 Key Decisions
-- Chose interface-based design for OAuth2 to support multiple providers without tight coupling
-- Decided to add null checks in payment flow rather than enforce non-null at API level (backward compatibility)
-
-### ⚠️ Impact Assessment
-- OAuth2 refactor affects all authentication flows; requires thorough testing before release
-- Payment fix is backward-compatible; safe to deploy immediately
-- Dashboard PR introduces new dependencies (chart.js); needs security review
+- Interface‑based design for new providers
 
 ### 🚧 Open Items
-- Complete OAuth2 integration tests for Google and GitHub providers
-- Schedule security review for dashboard dependencies
-- Document OAuth2 configuration for deployment team
+- Add integration tests for Google & GitHub
 
 ### 📚 Learnings
-- Python's ABC module provides cleaner interface definitions than Protocol for this use case
-- Payment gateway returns empty strings instead of null for missing tokens; need defensive checks
+- ABCs fit this use case better than Protocols
 ```
 
----
-
-## Configuration
-
-### Email Tracking
-
-Seev needs to know which commits are yours. Configure email tracking in order of priority:
-
-The `init_seev` tool creates `~/.config/seev/seev.toml`. Edit it to add your emails:
-
-```toml
-# Seev Configuration
-track_emails = ["you@work.com", "you@personal.com", "yourgithubhandle@users.github.com"]
-```
-
-### Workspace Paths
-
-By default, `init_seev` creates:
-- Worklog: `<workspace>/WORKLOG.md`
-- Database: `<workspace>/db.sqlite3`
-- Config: `~/.config/seev/seev.toml`
-
----
-
-## Advanced Usage
-
-### Multiple Repositories
-
-Track commits across multiple repos by configuring tracked repositories:
-
-```toml
-# ~/.config/seev/seev.toml
-track_repositories = [
-  "/path/to/local/repo",
-  "github-org/repo-name",
-  "https://github.com/org/another-repo.git"
-]
-```
-
-When generating worklog entries, Seev will include commits and PRs from all tracked repositories.
-
-### Custom Date Ranges
-
-The `worklog_entry` prompt accepts flexible date formats:
-
-- **Single day**: `2025-10-22` or `today` or `yesterday`
-- **Relative**: `last 2 days`, `last week`, `1 week ago`
-- **Range**: `2025-10-15..2025-10-22`
-
-Examples:
-
-> "Create a worklog entry for yesterday"
-
-> "Generate worklog entries for the last 2 weeks"
-
-> "Create a worklog for October 15-22, 2025"
-
-### GitHub Integration
-
-If you have the [GitHub MCP server](https://github.com/modelcontextprotocol/servers/tree/main/src/github) configured, Seev automatically enriches worklog entries with:
-
-- Pull request details (title, state, reviews)
-- Issue references and correlations
-- PR comments and review activity
-- Branch merge context
-
-No additional configuration needed — Seev detects and uses the GitHub MCP when available.
-
----
-
-## MCP Tools Reference
-
-Seev provides these MCP tools for your AI assistant:
-
-### Git Tools
-- **`get_commits_by_date`**: Fetch commits for a date range
-- **`get_recent_commits`**: Get recent commits (default: last 10)
-- **`get_commit_diff`**: View code changes for a specific commit
-- **`get_commit_files`**: List files changed in a commit
-- **`get_enriched_commits`**: Get commits with stats and categorization
-- **`get_current_branch`**: Show current branch info
-- **`list_branches`**: List all branches with metadata
-
-### Conversation Tracking
-- **`record_conversation_message`**: Log AI assistant conversations
-- **`get_recent_conversations`**: Retrieve recent conversation history
-- **`link_commit_to_conversation`**: Associate commits with conversations
-
-### Worklog Generation
-- **`append_to_markdown`**: Add content to WORKLOG.md under a date heading
-
----
-
-## MCP Prompts Reference
-
-Seev provides server-side prompts that your AI assistant can use:
-
-### `worklog_entry`
-
-Generate a comprehensive worklog entry for a date or period.
-
-**Required arguments:**
-- `date`: Target day or period (e.g., `2025-10-22`, `yesterday`, `last week`)
-- `inputs`: Your notes, context, or goals for the period
-
-**What it does:**
-1. Gathers commits, conversations, PRs, and metrics
-2. Correlates commits with conversations and PRs
-3. Generates structured markdown with all sections
-4. Saves to WORKLOG.md automatically
-
-**Usage:**
-
-> "Use the worklog_entry prompt for today. My inputs: worked on authentication refactor and bug fixes."
-
----
-
-### `conversation_summary`
-
-Create a concise summary of the current task/conversation and persist it by calling the `record_conversation_summary` tool.
-
-**Arguments:**
-- `date` (optional): ISO YYYY-MM-DD. If blank, the server injects today's local date.
-- `title` (optional): Title used when creating a new conversation; ignored if `conversation_id` is provided.
-- `conversation_id` (optional): Existing conversation id to append to.
-- `inputs` (optional): Notes or text to base the summary on.
-
-**Behavior:**
-- The LLM writes a short summary (bullets or brief sentences), then immediately calls `record_conversation_summary` with the resolved parameters.
-
-**Usage:**
-
-> "Use the conversation_summary prompt with inputs: wrapped up caching layer; chose Redis; add tests next week."
-
-## Troubleshooting
-
-### "No commits found"
-
-**Cause**: Email tracking not configured or no commits match your email.
-
-**Fix**: Configure `seev.toml` with your email addresses.
-
-### "Workspace not initialized"
-
-**Cause**: `init_seev` hasn't been run yet.
-
-**Fix**: Ask your AI assistant to run `init_seev` with a workspace path.
-
-### "Git tools unavailable"
-
-**Cause**: Not in a git repository or git not installed.
-
-**Fix**: Ensure you're in a git repository and git is in your PATH.
-
-### MCP server not loading
-
-**Cause**: Config file syntax error or incorrect path.
-
-**Fix**: 
-1. Validate JSON syntax in your MCP config file
-2. Restart your AI assistant after config changes
-3. Check logs for error messages
-
----
-
-## Development & Testing
-
-### Running Tests
-
-```bash
-# Install dependencies
-uv sync --group dev
-
-# Run test suite
-make test
-# or
-uv run pytest
-```
-
-### Code Quality
-
-```bash
-# Format code
-make format
-
-# Lint and fix
-make lint
-
-# Install pre-commit hook
-make hooks
-```
-
-### Running the Server Manually
-
-```bash
-# Stdio transport (default)
-make run-stdio
-
-# HTTP transport (port 8000)
-make run-http
-```
-
-### Server Logging
-
-Enable detailed logging for debugging:
-
-```bash
-export SEEV_LOG_PATH="~/.seev/logs/server.log"
-export SEEV_LOG_LEVEL=DEBUG
-```
+Your assistant generates and saves this under the date heading in WORKLOG.md using Seev’s MCP tools.
 
 ---
 
 ## Privacy & Data
 
-**Everything stays local.** Seev:
-- Stores data in your local filesystem
-- Never sends data to external services
-- Only accesses git repos you explicitly configure
-- Logs conversations only when your AI assistant calls the recording tools
+- Everything stays local: files and database on your machine
+- Only repositories you configure are read
+- Conversations are logged only when your assistant calls the recording tools
 
-You control:
-- What gets logged (via email tracking config)
-- Where data is stored (via workspace paths)
-- What gets shared (you decide what to commit or share from WORKLOG.md)
+See docs/privacy-and-data.md for details.
 
 ---
 
 ## Requirements
 
-- **Python**: 3.13+
-- **Git**: For commit tracking
-- **uv**: Package manager (recommended)
-- **MCP-compatible AI assistant**: Claude Desktop, Cursor, Cline, etc.
+- Python 3.13+
+- Git
+- An MCP‑compatible client (Claude Desktop, Cursor, Junie, Cline, …)
 
 ---
 
-## License
+## Links
 
-[Add your license here]
-
----
-
-## Contributing
-
-Contributions welcome! Please:
-1. Run tests: `make test`
-2. Format code: `make format`
-3. Lint: `make lint`
-4. Submit PR with clear description
+- Documentation: docs/index.md
+- Guides: docs/guides/index.md
+- Reference: docs/reference/index.md
+- Troubleshooting: docs/troubleshooting.md
+- GitHub: https://github.com/bcosynot/seev
+- Contributing: docs/contributing.md
+- License: LICENSE (see repository)
 
 ---
 
-## Support
+## Development (for contributors)
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/seev/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/seev/discussions)
-- **Documentation**: This README and inline code documentation
+- Install deps: make sync
+- Run tests: make test (or: uv run pytest)
+- Format: make format; Lint: make lint
+- Run MCP server: make run-stdio (stdio) · make run-http (port 8000)
+
+For deeper development notes, see AGENTS.md and the docs/ folder.
