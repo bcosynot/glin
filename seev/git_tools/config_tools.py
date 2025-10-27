@@ -140,7 +140,8 @@ def configure_tracked_emails(
     name="get_tracked_email_config",
     description=(
         "Get the current email tracking configuration. Returns the list of tracked email "
-        "addresses, count, and configuration source (environment variable, config file, or git config)."
+        "addresses, count, and configuration source (environment variable, config file, or "
+        "git config)."
     ),
 )
 def _tool_get_tracked_email_config() -> EmailConfig:  # pragma: no cover
@@ -152,7 +153,8 @@ def _tool_get_tracked_email_config() -> EmailConfig:  # pragma: no cover
     description=(
         "Get the current tracked repositories configuration. Returns the list of tracked "
         "repositories, count, and configuration source (environment variable or config file). "
-        "Repositories can be local filesystem paths, GitHub shorthand (owner/repo), or full Git URLs."
+        "Repositories can be local filesystem paths, GitHub shorthand (owner/repo), or full "
+        "Git URLs."
     ),
 )
 def _tool_get_tracked_repositories_config() -> RepositoriesConfig:  # pragma: no cover
@@ -163,7 +165,8 @@ def _tool_get_tracked_repositories_config() -> RepositoriesConfig:  # pragma: no
     name="configure_tracked_emails",
     description=(
         "Configure email addresses to track commits from. Supports two methods: 'env' to set the "
-        "SEEV_TRACK_EMAILS environment variable, or 'file' to create a seev.toml configuration file (with glin.toml fallback support)."
+        "SEEV_TRACK_EMAILS environment variable, or 'file' to create a seev.toml configuration "
+        "file (with glin.toml fallback support)."
     ),
 )
 def _tool_configure_tracked_emails(

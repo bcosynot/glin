@@ -84,7 +84,10 @@ def list_branches(workdir: str | None = None) -> list[BranchEntry]:
                 return [{"error": root_res["error"]}]
             repo_root = root_res.get("path")
 
-        fmt = "%(refname:short)|%(objectname)|%(upstream:short)|%(authorname)|%(authoremail)|%(authordate:iso8601)|%(subject)"
+        fmt = (
+            "%(refname:short)|%(objectname)|%(upstream:short)|%(authorname)|"
+            "%(authoremail)|%(authordate:iso8601)|%(subject)"
+        )
         res = run_git(["for-each-ref", f"--format={fmt}", "refs/heads"], repo_root=repo_root)
         branches: list[dict] = []
 
@@ -140,7 +143,8 @@ def list_branches(workdir: str | None = None) -> list[BranchEntry]:
 @mcp.tool(
     name="get_current_branch",
     description=(
-        "Get the current git branch information, including whether HEAD is detached, the upstream (if any), and ahead/behind counts versus upstream."
+        "Get the current git branch information, including whether HEAD is detached, "
+        "the upstream (if any), and ahead/behind counts versus upstream."
     ),
 )
 def _tool_get_current_branch(
@@ -149,7 +153,8 @@ def _tool_get_current_branch(
         Field(
             description=(
                 "Required working directory path. Git runs in the repository containing this path "
-                "using 'git -C <root>', ensuring commands execute in the client's project repository "
+                "using 'git -C <root>', ensuring commands "
+                "execute in the client's project repository "
                 "rather than the server process CWD. The path must reside inside a Git repository."
             )
         ),
@@ -158,8 +163,8 @@ def _tool_get_current_branch(
     if not workdir:
         return {
             "error": (
-                "Parameter 'workdir' is required. Provide a path inside the target Git repository "
-                "so the server can execute git commands with '-C <root>'."
+                "Parameter 'workdir' is required. Provide a path inside the target Git "
+                "repository so the server can execute git commands with '-C <root>'."
             )
         }
     return get_current_branch(workdir=workdir)
@@ -168,7 +173,8 @@ def _tool_get_current_branch(
 @mcp.tool(
     name="list_branches",
     description=(
-        "List local branches with upstream, ahead/behind counts, and last commit metadata. The current branch is marked in the response."
+        "List local branches with upstream, ahead/behind counts, and last commit metadata. "
+        "The current branch is marked in the response."
     ),
 )
 def _tool_list_branches(
@@ -177,7 +183,8 @@ def _tool_list_branches(
         Field(
             description=(
                 "Required working directory path. Git runs in the repository containing this path "
-                "using 'git -C <root>', ensuring commands execute in the client's project repository "
+                "using 'git -C <root>', ensuring commands "
+                "execute in the client's project repository "
                 "rather than the server process CWD. The path must reside inside a Git repository."
             )
         ),
@@ -187,8 +194,8 @@ def _tool_list_branches(
         return [
             {
                 "error": (
-                    "Parameter 'workdir' is required. Provide a path inside the target Git repository "
-                    "so the server can execute git commands with '-C <root>'."
+                    "Parameter 'workdir' is required. Provide a path inside the target Git "
+                    "repository so the server can execute git commands with '-C <root>'."
                 )
             }
         ]

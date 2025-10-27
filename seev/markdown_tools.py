@@ -535,23 +535,33 @@ def append_to_markdown(
     Append content under a date heading in a markdown file.
 
     Behavior:
-    - Default (preserve_lines=False): Each non-empty input line becomes a markdown bullet ("- ...").
-    - Raw mode (preserve_lines=True): Lines are written as-is (no automatic bullet prefix). Useful for writing headings like "### Goals".
-    - Update mode (update_mode=True): Read existing entry for the date and merge new content with existing sections instead of appending.
-    - Ensures a heading for the specified date ("## YYYY-MM-DD"). If no date is provided, uses the current local date. Creates it if missing.
+    - Default (preserve_lines=False): Each non-empty input line becomes a markdown bullet
+      ("- ...").
+    - Raw mode (preserve_lines=True): Lines are written as-is (no automatic bullet prefix).
+      Useful for writing headings like "### Goals".
+    - Update mode (update_mode=True): Read existing entry for the date and merge new content
+      with existing sections instead of appending.
+    - Ensures a heading for the specified date ("## YYYY-MM-DD"). If no date is provided, uses
+      the current local date. Creates it if missing.
     - Appends content under the chosen date's heading, before the next heading or at the end.
-    - Path resolution: file_path argument > SEEV_MD_PATH env var > seev.toml `markdown_path` (with glin.toml fallback) > ./WORKLOG.md.
+    - Path resolution: file_path argument > SEEV_MD_PATH env var > seev.toml `markdown_path`
+      (with glin.toml fallback) > ./WORKLOG.md.
 
     Args:
-        content: The text to append. Must be non-empty (after stripping). Newlines will be normalized.
+        content: The text to append. Must be non-empty (after stripping). Newlines will be
+            normalized.
         file_path: Optional target file path. Can be absolute or relative to the repo root.
-        date_str: Optional date string in ISO format (YYYY-MM-DD). When provided, content is added under this date's heading instead of today's.
-        preserve_lines: When True, write lines as-is; when False, prefix each non-empty line with "- ".
-        update_mode: When True, read existing entry for the date and merge new content with existing sections instead of appending.
-                     When False (default), append as before (backward compatible).
+        date_str: Optional date string in ISO format (YYYY-MM-DD). When provided, content is
+            added under this date's heading instead of today's.
+        preserve_lines: When True, write lines as-is; when False, prefix each non-empty line
+            with "- ".
+        update_mode: When True, read existing entry for the date and merge new content with
+            existing sections instead of appending. When False (default), append as before
+            (backward compatible).
 
     Returns:
-        A dict with operation details or an error message, including the exact content and line numbers added.
+        A dict with operation details or an error message, including the exact content and
+        line numbers added.
     """
     try:
         if content is None or str(content).strip() == "":
@@ -630,7 +640,8 @@ def append_to_markdown(
                             end_idx = i
                             break
 
-                    # Replace the section content (keep heading, replace everything until next heading)
+                    # Replace the section content (keep heading, replace content
+                    # until the next heading)
                     merged_lines = merged_content.split("\n")
                     # Remove leading empty line if present (we'll add proper spacing)
                     while merged_lines and merged_lines[0].strip() == "":
@@ -754,7 +765,8 @@ def append_to_markdown(
 
         # Build the new section content to insert
         insert_block = []
-        # Ensure there is a blank line after heading if immediate next line isn't blank and we're inserting directly
+        # Ensure there is a blank line after heading if the next line isn't blank
+        # and we're inserting directly
         after_heading_idx = heading_idx + 1
         if after_heading_idx >= len(doc_lines) or doc_lines[after_heading_idx].strip() != "":
             insert_block.append("")
@@ -776,12 +788,15 @@ def append_to_markdown(
             k = bullets_offset_in_block + idx
             bullet_line_numbers.append(insert_pos + k + 1)
 
-        # If we created the heading in this call, compute its 1-based line number in the final document
+        # If we created the heading in this call, compute its 1-based line number
+        # in the final document
         heading_added = not heading_exists
         heading_line_number = None
         if heading_added:
-            # Heading line is at heading_idx (recomputed above) in doc_lines BEFORE inserting insert_block
-            # Since we haven't yet inserted insert_block, its final 1-based line number is heading_idx + 1
+            # Heading line is at heading_idx (recomputed above) in doc_lines
+            # BEFORE inserting insert_block
+            # Since we haven't yet inserted insert_block, its final 1-based line
+            # number is heading_idx + 1
             heading_line_number = heading_idx + 1
 
         # Insert bullets block
@@ -817,7 +832,7 @@ def append_to_markdown(
 
 
 # Register MCP tool wrappers
-from fastmcp import Context  # type: ignore
+from fastmcp import Context  # type: ignore  # noqa: E402
 
 
 @mcp.tool(
@@ -871,10 +886,14 @@ async def _tool_read_date_entry(
     name="append_to_markdown",
     description=(
         "Append content under a specified date heading (default: today) in a markdown file. "
-        "Default behavior: each non-empty line becomes a bullet. Set preserve_lines=True to write "
-        "lines as-is (useful for headings like '### Goals'). Set update_mode=True to merge with "
-        "existing entry if present (deduplicates commits and bullets). Creates date heading (## YYYY-MM-DD) "
-        "if missing. Target file can be specified, or resolves as: explicit file_path > SEEV_MD_PATH > seev.toml 'markdown_path' (with glin.toml fallback) > ./WORKLOG.md."
+        "Default behavior: each non-empty line becomes a bullet. "
+        "Set preserve_lines=True to write lines as-is (useful for headings like '### Goals'). "
+        "Set update_mode=True to merge with existing entry if present "
+        "(deduplicates commits and bullets). "
+        "Creates date heading (## YYYY-MM-DD) if missing. "
+        "Target file can be specified, or resolves as: "
+        "explicit file_path > SEEV_MD_PATH > seev.toml 'markdown_path' (with glin.toml fallback) > "
+        "./WORKLOG.md."
     ),
 )
 async def _tool_append_to_markdown(

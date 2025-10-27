@@ -120,8 +120,9 @@ def get_commit_files(
 @mcp.tool(
     name="get_commit_files",
     description=(
-        "Get the list of files changed in a specific commit with detailed statistics. Returns commit "
-        "metadata along with a list of files showing their status and line counts."
+        "Get the list of files changed in a specific commit with detailed statistics. "
+        "Returns commit metadata along with a list of files showing their status and "
+        "line counts."
     ),
 )
 def _tool_get_commit_files(
@@ -131,7 +132,8 @@ def _tool_get_commit_files(
         Field(
             description=(
                 "Required working directory path. Git runs in the repository containing this path "
-                "using 'git -C <root>', ensuring commands execute in the client's project repository "
+                "using 'git -C <root>', ensuring commands "
+                "execute in the client's project repository "
                 "rather than the server process CWD. The path must reside inside a Git repository."
             )
         ),

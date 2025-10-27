@@ -8,7 +8,7 @@ from ..config import get_db_path as _get_db_path
 DEFAULT_DB_PATH = "~/.glin/db.sqlite3"
 
 # Types for status
-from typing import TypedDict
+from typing import TypedDict  # noqa: E402
 
 
 class DBTableCount(TypedDict):

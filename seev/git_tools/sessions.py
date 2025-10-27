@@ -198,8 +198,9 @@ def get_work_sessions(
 @mcp.tool(
     name="get_work_sessions",
     description=(
-        "Group commits in a date range into logical work sessions based on time gaps and message patterns. "
-        "Returns either an error/info list (when applicable) or a structured object with sessions."
+        "Group commits in a date range into logical work sessions based on time gaps and "
+        "message patterns. Returns either an error/info list (when applicable) or a structured "
+        "object with sessions."
     ),
 )
 async def _tool_get_work_sessions(

@@ -63,7 +63,8 @@ async def init_glin(path: str) -> InitGlinSuccess | InitGlinError:
     """Scaffold a Glin workspace directory.
 
     Args:
-        path: Target directory path (absolute, or relative to current working directory). May include '~'.
+        path: Target directory path (absolute, or relative to current working directory).
+            May include '~'.
 
     Returns:
         Success dict with created flag and file paths, or an error dict when pre-existing

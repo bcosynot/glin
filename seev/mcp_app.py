@@ -82,17 +82,17 @@ if hasattr(mcp, "prompt") and callable(mcp.prompt):
 # Import tool modules to register their tools on the shared MCP instance
 # These imports are intentionally placed after `mcp` is created
 # so that decorators can attach to the same instance at import time.
-from . import (
-    conversation_tools as _conversation_tools,  # noqa: F401
-    git_tools as _git_tools,  # noqa: F401
-    markdown_tools as _markdown_tools,  # noqa: F401
-    prompts as _prompts,  # noqa: F401
-    scaffold_tools as _scaffold_tools,  # noqa: F401  # register workspace scaffold tool
+from . import (  # noqa: E402
+    conversation_tools as _conversation_tools,  # noqa: E402, F401
+    git_tools as _git_tools,  # noqa: E402, F401
+    markdown_tools as _markdown_tools,  # noqa: E402, F401
+    prompts as _prompts,  # noqa: E402, F401
+    scaffold_tools as _scaffold_tools,  # noqa: E402, F401  # register workspace scaffold tool
     # worklog_generator import is intentionally deferred to avoid heavy imports during docs build
 )
 
 # Import storage tools (commit-conversation links) to register their MCP tools
-from .storage import links as _storage_links  # noqa: F401
+from .storage import links as _storage_links  # noqa: E402, F401
 
 
 def _truthy(val: str | None) -> bool:

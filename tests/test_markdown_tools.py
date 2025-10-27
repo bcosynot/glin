@@ -188,7 +188,8 @@ def test_blank_lines_only_after_normalization(tmp_path, monkeypatch):
     # After processing, only "x" becomes a bullet, so this should work
     assert res["ok"] is True
 
-    # Test truly blank lines after normalization - need content that passes strip() but has no bullets
+    # Test truly blank lines after normalization — need content that passes strip()
+    # but results in no bullets
     # This is actually hard to trigger since any non-whitespace content will create bullets
 
 
