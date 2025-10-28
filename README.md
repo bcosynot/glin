@@ -20,7 +20,7 @@ Seev turns your real work—commits, PRs, and AI conversations—into a clean da
 Copy this into your terminal to set up Seev and a local workspace:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bcosynot/seev/main/seev-init.sh | bash -s
+/bin/bash -c "$(curl -fsSL https://bcosynot.github.io/seev/init.sh)"
 ```
 
 Then restart your MCP client so it can load the Seev server.

@@ -24,7 +24,7 @@ Recommended: use the install script. It prepares a workspace folder, a WORKLOG.m
 
 ```bash
 # Create ~/seev-workspace with sensible defaults
-curl -fsSL https://raw.githubusercontent.com/bcosynot/seev/main/seev-init.sh | bash -s
+/bin/bash -c "$(curl -fsSL https://bcosynot.github.io/seev/init.sh)"
 ```
 
 - Creates the target dir if missing
