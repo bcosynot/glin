@@ -143,7 +143,7 @@ def _run_git_log_query(
         cmd = _build_git_log_command(effective_args, author_filters)
         # Respect optional workdir by resolving repo root and using `git -C <root>` when provided.
         repo_root: str | None = None
-        if workdir is not None:
+        if workdir:
             root_res = resolve_repo_root(workdir)
             if "error" in root_res:
                 return [{"error": root_res["error"]}]
@@ -209,10 +209,10 @@ def _normalize_date_range(since: str, until: str | None) -> tuple[str, str]:
 
 
 def get_commits_by_date(
+    workdir: str,
     since: str,
     until: str = "now",
     branch: str | None = None,
-    workdir: str | None = None,
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:
     try:
         norm_since, norm_until = _normalize_date_range(since, until)
@@ -257,19 +257,18 @@ def get_branch_commits(
     ),
 )
 async def _tool_get_recent_commits(
-    count: int = 10,
-    branch: str | None = None,
     workdir: Annotated[
-        str | None,
+        str,
         Field(
             description=(
-                "Optional working directory for Git operations. "
-                "When set, Git runs in the repository "
-                "containing this path using 'git -C <root>', ensuring commands "
-                "execute in the client's project repository rather than the server process CWD."
+                "Required working directory for Git operations. Git runs in the repository "
+                "containing this path using 'git -C <root>', ensuring commands execute in the "
+                "client's project repository rather than the server process CWD."
             )
         ),
-    ] = None,
+    ],
+    count: int = 10,
+    branch: str | None = None,
     ctx: Context | None = None,
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:  # pragma: no cover
     # Start/context info
@@ -382,20 +381,19 @@ async def _tool_get_recent_commits(
     ),
 )
 async def _tool_get_commits_by_date(
+    workdir: Annotated[
+        str,
+        Field(
+            description=(
+                "Required working directory for Git operations. Git runs in the repository "
+                "containing this path using 'git -C <root>', ensuring commands execute in the "
+                "client's project repository rather than the server process CWD."
+            )
+        ),
+    ],
     since: str,
     until: str = "now",
     branch: str | None = None,
-    workdir: Annotated[
-        str | None,
-        Field(
-            description=(
-                "Optional working directory for Git operations. "
-                "When set, Git runs in the repository "
-                "containing this path using 'git -C <root>', ensuring commands "
-                "execute in the client's project repository rather than the server process CWD."
-            )
-        ),
-    ] = None,
     ctx: Context | None = None,
 ) -> list[CommitInfo | ErrorResponse | InfoResponse]:  # pragma: no cover
     authors = []
@@ -434,7 +432,7 @@ async def _tool_get_commits_by_date(
             },
         )
 
-    result = get_commits_by_date(since=since, until=until, branch=branch, workdir=workdir)
+    result = get_commits_by_date(workdir, since=since, until=until, branch=branch)
 
     commits_only: list[CommitInfo] = [r for r in result if isinstance(r, dict) and "hash" in r]
     commit_count = len(commits_only)
