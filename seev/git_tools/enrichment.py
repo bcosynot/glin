@@ -38,7 +38,7 @@ class EnrichedResult(TypedDict):
 
 
 def get_enriched_commits(
-    since: str, until: str = "now", workdir: str | None = None
+    workdir: str, since: str, until: str = "now"
 ) -> EnrichedResult | list[dict]:
     """Return commits within a date range enriched with analysis metadata.
 
@@ -49,7 +49,7 @@ def get_enriched_commits(
     for the caller to handle. Otherwise, return a structured object with commits
     and aggregated totals.
     """
-    commits = get_commits_by_date(since, until, workdir=workdir)
+    commits = get_commits_by_date(workdir, since, until)
 
     # Forward-through behavior for non-standard responses
     if not isinstance(commits, list) or not commits:
@@ -112,18 +112,17 @@ def get_enriched_commits(
     ),
 )
 async def _tool_get_enriched_commits(
-    since: str,
-    until: str = "now",
     workdir: Annotated[
-        str | None,
+        str,
         Field(
             description=(
-                "Optional working directory for Git operations. When set, Git runs in the "
-                "repository containing this path using 'git -C <root>', ensuring commands "
-                "execute in the client's project repository "
-                "rather than the server process CWD."
+                "Required working directory for Git operations. Git runs in the repository "
+                "containing this path using 'git -C <root>', ensuring commands execute in the "
+                "client's project repository rather than the server process CWD."
             )
         ),
-    ] = None,
+    ],
+    since: str,
+    until: str = "now",
 ) -> EnrichedResult | list[dict]:
-    return get_enriched_commits(since, until, workdir=workdir)
+    return get_enriched_commits(workdir, since, until)

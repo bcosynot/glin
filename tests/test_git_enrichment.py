@@ -10,26 +10,26 @@ def test_get_enriched_commits_forwards_info(monkeypatch):
     # When underlying commit query returns an info dict, forward it unchanged
     calls: dict[str, Any] = {}
 
-    def fake_get_commits_by_date(since: str, until: str = "now", workdir: str | None = None):  # noqa: ARG001
+    def fake_get_commits_by_date(workdir: str, since: str, until: str = "now"):
         calls["workdir"] = workdir
         return [{"info": "No commits found in date range"}]
 
     monkeypatch.setattr("seev.git_tools.enrichment.get_commits_by_date", fake_get_commits_by_date)
 
-    res = get_enriched_commits("2025-01-01")
+    res = get_enriched_commits("/dummy", "2025-01-01")
     assert isinstance(res, list)
     assert res and res[0].get("info") == "No commits found in date range"
     # Ensure workdir was threaded
-    assert calls["workdir"] is None
+    assert calls["workdir"] == "/dummy"
 
 
 def test_get_enriched_commits_forwards_error(monkeypatch):
-    def fake_get_commits_by_date(since: str, until: str = "now", workdir: str | None = None):  # noqa: ARG001
+    def fake_get_commits_by_date(workdir: str, since: str, until: str = "now"):
         return [{"error": "repo root not found"}]
 
     monkeypatch.setattr("seev.git_tools.enrichment.get_commits_by_date", fake_get_commits_by_date)
 
-    res = get_enriched_commits("2025-01-01", workdir="/bad/path")
+    res = get_enriched_commits("/bad/path", "2025-01-01")
     assert isinstance(res, list)
     assert res and res[0].get("error") == "repo root not found"
 
@@ -42,7 +42,7 @@ def test_get_enriched_commits_success_with_workdir(monkeypatch):
     ]
     tracked_workdirs: list[str | None] = []
 
-    def fake_get_commits_by_date(since: str, until: str = "now", workdir: str | None = None):  # noqa: ARG001
+    def fake_get_commits_by_date(workdir: str, since: str, until: str = "now"):
         tracked_workdirs.append(workdir)
         return commits
 
@@ -66,7 +66,7 @@ def test_get_enriched_commits_success_with_workdir(monkeypatch):
     monkeypatch.setattr("seev.git_tools.enrichment.categorize_commit", fake_category)
     monkeypatch.setattr("seev.git_tools.enrichment.detect_merge_info", fake_merge_info)
 
-    res = get_enriched_commits("yesterday", "now", workdir="/work/repo")
+    res = get_enriched_commits("/work/repo", "yesterday", "now")
     # Expect a structured EnrichedResult object
     assert isinstance(res, dict)
     assert set(res.keys()) == {"commits", "totals", "generated_at"}
