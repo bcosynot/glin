@@ -42,7 +42,7 @@ Copy these into your terminal:
 
 #### 1. Setup the MCP and workspace
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bcosynot/seev/main/seev-init.sh | bash -s
+/bin/bash -c "$(curl -fsSL https://bcosynot.github.io/seev/init.sh)"
 ```
 
 #### 2. Add a worklog entry

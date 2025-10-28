@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# seev-init.sh — Your one-minute Seev setup
+# init.sh — Your one-minute Seev setup
 #
 # What you get
 # - A ready-to-use folder that holds your personal Seev data:
@@ -14,7 +14,7 @@
 # - Customize later — you can edit the config or use env vars without re-running the script
 #
 # Quick start
-#   ./seev-init.sh [options] <target_dir>
+#   ./init.sh [options] <target_dir>
 #   If you omit <target_dir> or options, we’ll ask a few quick questions.
 #   Press Enter to accept defaults — you can tweak things any time.
 #
@@ -30,9 +30,9 @@
 #
 # Examples
 #   Minimal (accept prompts and defaults):
-#     ./seev-init.sh ~/seev-data
+#     ./init.sh ~/seev-data
 #   Pre-configure emails and repos (no prompts):
-#     ./seev-init.sh -y -e "me@ex.com" -r "owner/repo,~/code/that-repo" ~/seev-data
+#     ./init.sh -y -e "me@ex.com" -r "owner/repo,~/code/that-repo" ~/seev-data
 #
 # Tips
 # - You can override settings at runtime via env vars (great for experiments):
