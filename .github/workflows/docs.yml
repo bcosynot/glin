@@ -1,25 +1,30 @@
-name: Docs
+name: Deploy MkDocs site
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches: [ main ]
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'init.sh'
+      - 'pyproject.toml'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
 
-# Required for gh-pages deployment with GITHUB_TOKEN
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
-  group: docs-${{ github.ref }}
+  group: 'pages'
   cancel-in-progress: true
 
 jobs:
   build:
-    name: Build MkDocs site
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Check out repository
         uses: actions/checkout@v4
 
       - name: Set up Python 3.13
@@ -27,50 +32,45 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v3
+      - name: Install uv (Python package manager)
+        run: |
+          curl -fsSL https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Sync dependencies (dev)
-        run: uv sync --group dev
+      - name: Sync dependencies (dev group)
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            uv sync --group dev
+          else
+            python -m pip install --upgrade pip
+            pip install mkdocs mkdocs-material 'mkdocstrings[python]' mkdocs-git-revision-date-localized-plugin
+          fi
 
-      - name: Build docs (strict)
-        run: uv run mkdocs build --strict
+      - name: Build docs with MkDocs
+        run: |
+          if command -v uv >/dev/null 2>&1; then
+            uv run mkdocs build --strict
+          else
+            mkdocs build --strict
+          fi
 
-      - name: Upload site artifact (PR previews)
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/upload-artifact@v4
+      - name: Copy init.sh into built site
+        run: |
+          mkdir -p site
+          cp init.sh site/init.sh
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: mkdocs-site
           path: site
-          if-no-files-found: error
 
   deploy:
-    name: Deploy to GitHub Pages (gh-pages)
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.13
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v3
-
-      - name: Sync dependencies (dev)
-        run: uv sync --group dev
-
-      - name: Build docs (strict)
-        run: uv run mkdocs build --strict
-
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
-          publish_branch: gh-pages
-          keep_files: true  # preserve existing files like CNAME if present
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
