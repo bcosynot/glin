@@ -123,7 +123,7 @@ def test_get_commits_by_date_parses_and_empty_info(monkeypatch):
                 ]
             ),
         )
-        res_empty = get_commits_by_date("yesterday", "now")
+        res_empty = get_commits_by_date("", "yesterday", "now")
         assert res_empty and res_empty[0].get("info") == "No commits found in date range"
 
         # Success case with two commits
@@ -136,7 +136,7 @@ def test_get_commits_by_date_parses_and_empty_info(monkeypatch):
                 ]
             ),
         )
-        res = get_commits_by_date("1 week ago", "now")
+        res = get_commits_by_date("", "1 week ago", "now")
         assert len(res) == 2
         assert res[0]["hash"] == "a1"
         assert res[1]["message"] == "two"
@@ -199,7 +199,7 @@ def test_get_commits_by_date_handles_subprocess_error(monkeypatch):
             ),
         )
 
-        res = get_commits_by_date("yesterday", "now")
+        res = get_commits_by_date("", "yesterday", "now")
         assert res and "error" in res[0]
 
 
@@ -213,7 +213,7 @@ def test_get_commits_by_date_handles_general_exception(monkeypatch):
     with patch("seev.git_tools.get_tracked_emails", return_value=["me@example.com"]):
         monkeypatch.setattr(subprocess, "run", failing_run)
 
-        res = get_commits_by_date("yesterday", "now")
+        res = get_commits_by_date("", "yesterday", "now")
         assert res and "error" in res[0]
         assert "Failed to get commits" in res[0]["error"]
 
@@ -1110,7 +1110,7 @@ def test_get_commits_by_date_normalizes_single_iso_date(monkeypatch):
                 ]
             ),
         )
-        res = get_commits_by_date("2025-10-11")
+        res = get_commits_by_date("", "2025-10-11")
         assert res and res[0].get("info") == "No commits found in date range"
 
 
@@ -1139,5 +1139,5 @@ def test_get_commits_by_date_no_normalize_with_explicit_until(monkeypatch):
                 ]
             ),
         )
-        res = get_commits_by_date("2025-10-11", "2025-10-12")
+        res = get_commits_by_date("", "2025-10-11", "2025-10-12")
         assert res and res[0].get("info") == "No commits found in date range"
