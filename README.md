@@ -35,9 +35,9 @@ More examples and details are in Guides → Quick Start: docs/guides/quick-start
 
 ---
 
-## Works with your MCP client
+## Works with your AI assistant
 
-Seev is an MCP server and runs alongside your editor/assistant. For client‑specific setup (Cursor, Claude Desktop/Cline, Junie, VS Code, etc.), see:
+Seev is an MCP server and runs alongside your editor/assistant. For client‑specific setup (Cursor, Claude Code, Junie, VS Code, etc.), see:
 
 - Guides → MCP clients: docs/guides/mcp-clients.md
 
@@ -104,7 +104,7 @@ See docs/privacy-and-data.md for details.
 
 - Python 3.13+
 - Git
-- An MCP‑compatible client (Claude Desktop, Cursor, Junie, Cline, …)
+- An MCP‑compatible client (Claude Code, Cursor, Junie, Cline, …)
 
 ---
 
