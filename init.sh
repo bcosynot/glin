@@ -297,8 +297,8 @@ ensure_uv() {
 ensure_uv
 
 json_upsert_server() {
-  # json_upsert_server <file> <name> <command> <args_json> <transport>
-  local file="$1" name="$2" cmd="$3" args_json="$4" transport="$5"
+  # json_upsert_server <file> <name> <command> <args_json> <env_json>
+  local file="$1" name="$2" cmd="$3" args_json="$4" env_json="${5:-{}}"
   local dir
   dir=$(dirname "$file")
   mkdir -p "$dir"
@@ -316,27 +316,26 @@ json_upsert_server() {
     else
       echo '{}' > "$tmp"
     fi
-    # Ensure .servers exists and upsert entry
+    # Ensure .mcpServers exists and upsert entry (Junie/Cursor schema)
     local updated
     updated=$(jq \
       --arg name "$name" \
       --arg cmd "$cmd" \
       --argjson args "$args_json" \
-      --arg transport "$transport" \
-      '.servers = (.servers // {})
-       | .servers[$name] = {command: $cmd, args: $args, transport: $transport}' "$tmp")
+      --argjson env "$env_json" \
+      '.mcpServers = (.mcpServers // {})
+       | .mcpServers[$name] = ({command: $cmd, args: $args} + (if ($env|length) > 0 then {env: $env} else {} end))' "$tmp")
     echo "$updated" > "$file"
     rm -f "$tmp"
-    echo "Updated $file → server '$name' (transport=$transport)"
+    echo "Updated $file → mcpServers['$name']"
   else
     # Fallback: write a minimal file (no merge). Warn user.
     cat > "$file" <<JSON
 {
-  "servers": {
+  "mcpServers": {
     "$name": {
       "command": "$cmd",
-      "args": $(echo "$args_json"),
-      "transport": "$transport"
+      "args": $(echo "$args_json")
     }
   }
 }
@@ -347,13 +346,13 @@ JSON
 
 configure_junie() {
   local path="$HOME/.junie/mcp.json"
-  json_upsert_server "$path" "seev" "uvx" '["--from","git+https://github.com/bcosynot/seev.git","seev"]' "stdio"
+  json_upsert_server "$path" "seev" "uvx" '["--from","git+https://github.com/bcosynot/seev.git","seev"]' '{}'
   JUNIE_CFG="$path"
 }
 
 configure_cursor() {
   local path="$HOME/.cursor/mcp.json"
-  json_upsert_server "$path" "seev" "uvx" '["--from","git+https://github.com/bcosynot/seev.git","seev"]' "stdio"
+  json_upsert_server "$path" "seev" "uvx" '["--from","git+https://github.com/bcosynot/seev.git","seev"]' '{}'
   CURSOR_CFG="$path"
 }
 
