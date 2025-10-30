@@ -2,23 +2,15 @@
 
 Configure Seev with your preferred MCP‑compatible client. Use the tab for your client and restart it after saving the config.
 
-=== "Claude Desktop"
+=== "Claude Code"
 
-    Config file (create if missing):
+    Use the Claude CLI to add Seev at user scope (recommended):
 
-    - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-    - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-
-    ```json
-    {
-      "mcpServers": {
-        "seev": {
-          "command": "uvx",
-          "args": ["--from", "git+https://github.com/bcosynot/seev.git", "seev"]
-        }
-      }
-    }
+    ```bash
+    claude mcp add --transport stdio --scope user --name seev -- uvx --from git+https://github.com/bcosynot/seev.git seev
     ```
+
+    After running the command, restart Claude Code so it picks up the new MCP server.
 
 
 === "Cursor"
