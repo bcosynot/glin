@@ -297,8 +297,8 @@ ensure_uv() {
 ensure_uv
 
 json_upsert_server() {
-  # json_upsert_server <file> <name> <command> <args_json> <env_json>
-  local file="$1" name="$2" cmd="$3" args_json="$4" env_json="${5:-{}}"
+  # json_upsert_server <file> <name> <command> <args_json>
+  local file="$1" name="$2" cmd="$3" args_json="$4"
   local dir
   dir=$(dirname "$file")
   mkdir -p "$dir"
@@ -322,18 +322,17 @@ json_upsert_server() {
       --arg name "$name" \
       --arg cmd "$cmd" \
       --argjson args "$args_json" \
-      --argjson env "$env_json" \
       '.mcpServers = (.mcpServers // {})
-       | .mcpServers[$name] = ({command: $cmd, args: $args} + (if ($env|length) > 0 then {env: $env} else {} end))' "$tmp")
+       | .mcpServers[$name] = {command: $cmd, args: $args}' "$tmp")
     echo "$updated" > "$file"
     rm -f "$tmp"
     echo "Updated $file → mcpServers['$name']"
   else
     # Fallback: merge using Python if available; otherwise write minimal file with warning.
     if command -v python3 >/dev/null 2>&1; then
-      python3 - "$file" "$name" "$cmd" "$args_json" "$env_json" <<'PY'
+      python3 - "$file" "$name" "$cmd" "$args_json" <<'PY'
 import json, os, sys, tempfile, shutil
-path, name, cmd, args_json, env_json = sys.argv[1:]
+path, name, cmd, args_json = sys.argv[1:]
 # Load existing JSON if present
 obj = {}
 if os.path.exists(path) and os.path.getsize(path) > 0:
@@ -361,10 +360,7 @@ try:
     args = json.loads(args_json)
 except Exception:
     args = []
-try:
-    env = json.loads(env_json) if env_json and env_json != '{}' else {}
-except Exception:
-    env = {}
+env = {}
 # Build server entry
 entry = { 'command': cmd, 'args': args }
 if env:
@@ -408,13 +404,13 @@ JSON
 
 configure_junie() {
   local path="$HOME/.junie/mcp.json"
-  json_upsert_server "$path" "seev" "uvx" '["--from","git+https://github.com/bcosynot/seev.git","seev"]' '{}'
+  json_upsert_server "$path" "seev" "uvx" '["--from","git+https://github.com/bcosynot/seev.git","seev"]'
   JUNIE_CFG="$path"
 }
 
 configure_cursor() {
   local path="$HOME/.cursor/mcp.json"
-  json_upsert_server "$path" "seev" "uvx" '["--from","git+https://github.com/bcosynot/seev.git","seev"]' '{}'
+  json_upsert_server "$path" "seev" "uvx" '["--from","git+https://github.com/bcosynot/seev.git","seev"]'
   CURSOR_CFG="$path"
 }
 
