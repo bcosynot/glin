@@ -297,8 +297,8 @@ ensure_uv() {
 ensure_uv
 
 json_upsert_server() {
-  # json_upsert_server <file> <name> <command> <args_json> <transport>
-  local file="$1" name="$2" cmd="$3" args_json="$4" transport="$5"
+  # json_upsert_server <file> <name> <command> <args_json>
+  local file="$1" name="$2" cmd="$3" args_json="$4"
   local dir
   dir=$(dirname "$file")
   mkdir -p "$dir"
@@ -316,44 +316,101 @@ json_upsert_server() {
     else
       echo '{}' > "$tmp"
     fi
-    # Ensure .servers exists and upsert entry
+    # Ensure .mcpServers exists and upsert entry (Junie/Cursor schema)
     local updated
     updated=$(jq \
       --arg name "$name" \
       --arg cmd "$cmd" \
       --argjson args "$args_json" \
-      --arg transport "$transport" \
-      '.servers = (.servers // {})
-       | .servers[$name] = {command: $cmd, args: $args, transport: $transport}' "$tmp")
+      '.mcpServers = (.mcpServers // {})
+       | .mcpServers[$name] = {command: $cmd, args: $args}' "$tmp")
     echo "$updated" > "$file"
     rm -f "$tmp"
-    echo "Updated $file → server '$name' (transport=$transport)"
+    echo "Updated $file → mcpServers['$name']"
   else
-    # Fallback: write a minimal file (no merge). Warn user.
-    cat > "$file" <<JSON
+    # Fallback: merge using Python if available; otherwise write minimal file with warning.
+    if command -v python3 >/dev/null 2>&1; then
+      python3 - "$file" "$name" "$cmd" "$args_json" <<'PY'
+import json, os, sys, tempfile, shutil
+path, name, cmd, args_json = sys.argv[1:]
+# Load existing JSON if present
+obj = {}
+if os.path.exists(path) and os.path.getsize(path) > 0:
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            obj = json.load(f)
+    except Exception:
+        # If unreadable, start fresh but keep a backup
+        pass
+# Ensure mcpServers exists; support object or array forms
+servers = obj.get('mcpServers')
+if isinstance(servers, dict):
+    pass
+elif isinstance(servers, list):
+    # Convert list entries with name keys into a dict for reliable upsert
+    new_dict = {}
+    for item in servers:
+        if isinstance(item, dict) and 'name' in item:
+            new_dict[item['name']] = {k: v for k, v in item.items() if k != 'name'}
+    servers = new_dict
+else:
+    servers = {}
+# Parse args/env JSON
+try:
+    args = json.loads(args_json)
+except Exception:
+    args = []
+env = {}
+# Build server entry
+entry = { 'command': cmd, 'args': args }
+if env:
+    entry['env'] = env
+# Upsert
+servers[name] = entry
+# Prefer object form going forward
+obj['mcpServers'] = servers
+# Atomic write with backup
+backup = None
+if os.path.exists(path):
+    backup = f"{path}.{__import__('time').strftime('%Y%m%d-%H%M%S')}.bak"
+    try:
+        shutil.copy2(path, backup)
+    except Exception:
+        backup = None
+fd, tmp = tempfile.mkstemp(prefix='mcp.', suffix='.json', dir=os.path.dirname(path) or None)
+os.close(fd)
+with open(tmp, 'w', encoding='utf-8') as f:
+    json.dump(obj, f, indent=2, ensure_ascii=False)
+    f.write('\n')
+shutil.move(tmp, path)
+print(f"Updated {path} → mcpServers['{name}'] (python fallback)")
+PY
+    else
+      # Last-resort fallback: write a minimal file (no merge). Warn user.
+      cat > "$file" <<JSON
 {
-  "servers": {
+  "mcpServers": {
     "$name": {
       "command": "$cmd",
-      "args": $(echo "$args_json"),
-      "transport": "$transport"
+      "args": $(echo "$args_json")
     }
   }
 }
 JSON
-    echo "Wrote $file without merging (jq not found). Existing entries may be overwritten."
+      echo "Wrote $file without merging (jq and python3 not found). Existing entries may be overwritten."
+    fi
   fi
 }
 
 configure_junie() {
   local path="$HOME/.junie/mcp.json"
-  json_upsert_server "$path" "seev" "uvx" '["--from","git+https://github.com/bcosynot/seev.git","seev"]' "stdio"
+  json_upsert_server "$path" "seev" "uvx" '["--from","git+https://github.com/bcosynot/seev.git","seev"]'
   JUNIE_CFG="$path"
 }
 
 configure_cursor() {
   local path="$HOME/.cursor/mcp.json"
-  json_upsert_server "$path" "seev" "uvx" '["--from","git+https://github.com/bcosynot/seev.git","seev"]' "stdio"
+  json_upsert_server "$path" "seev" "uvx" '["--from","git+https://github.com/bcosynot/seev.git","seev"]'
   CURSOR_CFG="$path"
 }
 
