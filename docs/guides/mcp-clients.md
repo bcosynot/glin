@@ -20,12 +20,6 @@ Configure Seev with your preferred MCP‑compatible client. Use the tab for your
     }
     ```
 
-    !!! tip "HTTP transport (optional)"
-        Seev defaults to stdio. To run over HTTP (port 8000), start it manually:
-        
-        ```bash
-        uv run python main.py --transport http
-        ```
 
 === "Cursor"
 
@@ -44,7 +38,7 @@ Configure Seev with your preferred MCP‑compatible client. Use the tab for your
     }
     ```
 
-=== "Cline (VS Code)"
+=== "Cline"
 
     VS Code settings (User or Workspace):
 
