@@ -1391,3 +1391,266 @@ def test_append_to_markdown_backward_compatibility(tmp_path, monkeypatch):
     file_content = read(target)
     assert "- Old entry" in file_content
     assert "- New entry" in file_content
+
+
+# Tests for ascending date order
+
+
+def test_append_older_date_before_newer_date(tmp_path, monkeypatch):
+    """Test that adding an older date inserts it before newer dates."""
+    monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
+
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    target = tmp_path / "WORKLOG.md"
+
+    # Create file with a newer date
+    initial = """## 2024-01-15
+
+- Entry for 15th
+"""
+    target.write_text(initial, encoding="utf-8")
+
+    # Add an older date
+    res = append_to_markdown("Entry for 10th", date_str="2024-01-10")
+
+    assert res["ok"] is True
+    content = read(target)
+    lines = content.split("\n")
+
+    # Find positions of the dates
+    pos_10th = None
+    pos_15th = None
+    for i, line in enumerate(lines):
+        if "## 2024-01-10" in line:
+            pos_10th = i
+        elif "## 2024-01-15" in line:
+            pos_15th = i
+
+    assert pos_10th is not None
+    assert pos_15th is not None
+    assert pos_10th < pos_15th, "Older date should come before newer date"
+
+
+def test_append_newer_date_after_older_date(tmp_path, monkeypatch):
+    """Test that adding a newer date appends it after older dates."""
+    monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
+
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    target = tmp_path / "WORKLOG.md"
+
+    # Create file with an older date
+    initial = """## 2024-01-10
+
+- Entry for 10th
+"""
+    target.write_text(initial, encoding="utf-8")
+
+    # Add a newer date
+    res = append_to_markdown("Entry for 15th", date_str="2024-01-15")
+
+    assert res["ok"] is True
+    content = read(target)
+    lines = content.split("\n")
+
+    # Find positions of the dates
+    pos_10th = None
+    pos_15th = None
+    for i, line in enumerate(lines):
+        if "## 2024-01-10" in line:
+            pos_10th = i
+        elif "## 2024-01-15" in line:
+            pos_15th = i
+
+    assert pos_10th is not None
+    assert pos_15th is not None
+    assert pos_10th < pos_15th, "Older date should come before newer date"
+
+
+def test_append_date_in_middle_of_sequence(tmp_path, monkeypatch):
+    """Test that adding a date in the middle maintains ascending order."""
+    monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
+
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    target = tmp_path / "WORKLOG.md"
+
+    # Create file with dates on 10th and 20th
+    initial = """## 2024-01-10
+
+- Entry for 10th
+
+## 2024-01-20
+
+- Entry for 20th
+"""
+    target.write_text(initial, encoding="utf-8")
+
+    # Add a date in the middle (15th)
+    res = append_to_markdown("Entry for 15th", date_str="2024-01-15")
+
+    assert res["ok"] is True
+    content = read(target)
+    lines = content.split("\n")
+
+    # Find positions of all dates
+    pos_10th = None
+    pos_15th = None
+    pos_20th = None
+    for i, line in enumerate(lines):
+        if "## 2024-01-10" in line:
+            pos_10th = i
+        elif "## 2024-01-15" in line:
+            pos_15th = i
+        elif "## 2024-01-20" in line:
+            pos_20th = i
+
+    assert pos_10th is not None
+    assert pos_15th is not None
+    assert pos_20th is not None
+    assert pos_10th < pos_15th < pos_20th, "Dates should be in ascending order"
+
+
+def test_append_multiple_dates_maintains_order(tmp_path, monkeypatch):
+    """Test that adding multiple dates out of order results in ascending order."""
+    monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
+
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    target = tmp_path / "WORKLOG.md"
+
+    # Start with empty file
+    target.write_text("", encoding="utf-8")
+
+    # Add dates out of order
+    append_to_markdown("Entry for 15th", date_str="2024-01-15")
+    append_to_markdown("Entry for 10th", date_str="2024-01-10")
+    append_to_markdown("Entry for 20th", date_str="2024-01-20")
+    append_to_markdown("Entry for 12th", date_str="2024-01-12")
+
+    content = read(target)
+    lines = content.split("\n")
+
+    # Find positions of all dates
+    positions = {}
+    for i, line in enumerate(lines):
+        if "## 2024-01-10" in line:
+            positions["10th"] = i
+        elif "## 2024-01-12" in line:
+            positions["12th"] = i
+        elif "## 2024-01-15" in line:
+            positions["15th"] = i
+        elif "## 2024-01-20" in line:
+            positions["20th"] = i
+
+    assert len(positions) == 4
+    assert positions["10th"] < positions["12th"] < positions["15th"] < positions["20th"], (
+        "All dates should be in ascending chronological order"
+    )
+
+
+def test_append_to_empty_file_with_date(tmp_path, monkeypatch):
+    """Test that adding to an empty file works correctly."""
+    monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
+
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    target = tmp_path / "WORKLOG.md"
+
+    # File doesn't exist yet
+    res = append_to_markdown("First entry", date_str="2024-01-15")
+
+    assert res["ok"] is True
+    content = read(target)
+
+    assert "## 2024-01-15" in content
+    assert "- First entry" in content
+
+
+def test_append_with_non_date_headings(tmp_path, monkeypatch):
+    """Test that non-date headings don't interfere with date ordering."""
+    monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
+
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    target = tmp_path / "WORKLOG.md"
+
+    # Create file with non-date headings and date headings
+    initial = """# Work Log
+
+## Introduction
+
+Some intro text
+
+## 2024-01-15
+
+- Entry for 15th
+"""
+    target.write_text(initial, encoding="utf-8")
+
+    # Add an older date
+    res = append_to_markdown("Entry for 10th", date_str="2024-01-10")
+
+    assert res["ok"] is True
+    content = read(target)
+    lines = content.split("\n")
+
+    # Find positions
+    pos_intro = None
+    pos_10th = None
+    pos_15th = None
+    for i, line in enumerate(lines):
+        if "## Introduction" in line:
+            pos_intro = i
+        elif "## 2024-01-10" in line:
+            pos_10th = i
+        elif "## 2024-01-15" in line:
+            pos_15th = i
+
+    assert pos_intro is not None
+    assert pos_10th is not None
+    assert pos_15th is not None
+    # Date entries should be in order, and after non-date headings
+    assert pos_10th < pos_15th, "Dates should be in ascending order"
+
+
+def test_append_across_months_and_years(tmp_path, monkeypatch):
+    """Test that date ordering works across months and years."""
+    monkeypatch.chdir(tmp_path)
+    import seev.markdown_tools
+
+    monkeypatch.setattr(seev.markdown_tools, "get_markdown_path", lambda: "WORKLOG.md")
+    target = tmp_path / "WORKLOG.md"
+
+    # Start with empty file
+    target.write_text("", encoding="utf-8")
+
+    # Add dates from different months and years
+    append_to_markdown("Entry for Dec 2024", date_str="2024-12-15")
+    append_to_markdown("Entry for Jan 2023", date_str="2023-01-10")
+    append_to_markdown("Entry for Jun 2024", date_str="2024-06-20")
+    append_to_markdown("Entry for Feb 2025", date_str="2025-02-05")
+
+    content = read(target)
+    lines = content.split("\n")
+
+    # Find positions of all dates
+    positions = {}
+    for i, line in enumerate(lines):
+        if "## 2023-01-10" in line:
+            positions["2023-01"] = i
+        elif "## 2024-06-20" in line:
+            positions["2024-06"] = i
+        elif "## 2024-12-15" in line:
+            positions["2024-12"] = i
+        elif "## 2025-02-05" in line:
+            positions["2025-02"] = i
+
+    assert len(positions) == 4
+    assert (
+        positions["2023-01"]
+        < positions["2024-06"]
+        < positions["2024-12"]
+        < positions["2025-02"]
+    ), "Dates should be in ascending order across years"

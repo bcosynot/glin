@@ -523,6 +523,46 @@ def merge_date_sections(
     return merged_content, total_duplicates
 
 
+def _find_date_insertion_position(doc_lines: list[str], new_date_str: str) -> int:
+    """
+    Find the position to insert a new date heading to maintain ascending chronological order.
+
+    Args:
+        doc_lines: List of lines in the document
+        new_date_str: ISO format date string (YYYY-MM-DD)
+
+    Returns:
+        Line index where the new date heading should be inserted.
+    """
+    from datetime import date
+
+    new_date = date.fromisoformat(new_date_str)
+    date_pattern = re.compile(r"^##\s+(\d{4}-\d{2}-\d{2})\s*$")
+
+    # Find all date headings and their positions
+    for i, line in enumerate(doc_lines):
+        match = date_pattern.match(line.strip())
+        if match:
+            existing_date_str = match.group(1)
+            try:
+                existing_date = date.fromisoformat(existing_date_str)
+                # If we find a date that's greater than our new date,
+                # insert before it (to maintain ascending order)
+                if existing_date > new_date:
+                    # Insert before this line, with proper spacing
+                    # Check if there's a blank line before
+                    if i > 0 and doc_lines[i - 1].strip() == "":
+                        return i - 1
+                    return i
+            except ValueError:
+                # Invalid date format, skip
+                continue
+
+    # If we get here, either there are no dates or all dates are before our new date
+    # Append at the end
+    return len(doc_lines)
+
+
 def append_to_markdown(
     content: str,
     file_path: str | None = None,
@@ -734,14 +774,23 @@ def append_to_markdown(
             heading_exists = False
             heading_idx = None
 
-        # If heading is missing, append it at end with proper spacing
+        # If heading is missing, insert it in chronological order (ascending)
         if not heading_exists:
-            # Ensure blank line before new heading if file not empty and last line not blank
-            if doc_lines and doc_lines[-1].strip() != "":
-                doc_lines.append("")
-            doc_lines.append(heading)
-            doc_lines.append("")  # blank line after heading
-            # After appending, recalculate heading index
+            # Find the correct position to insert the date to maintain ascending order
+            insert_pos = _find_date_insertion_position(doc_lines, date_for_heading)
+
+            # Prepare the heading lines to insert
+            heading_lines = []
+            # Add blank line before heading if needed
+            if insert_pos > 0 and doc_lines and insert_pos <= len(doc_lines):
+                if insert_pos < len(doc_lines) and doc_lines[insert_pos - 1].strip() != "":
+                    heading_lines.append("")
+            heading_lines.append(heading)
+            heading_lines.append("")  # blank line after heading
+
+            # Insert the heading at the correct position
+            doc_lines[insert_pos:insert_pos] = heading_lines
+            # After inserting, recalculate heading index
 
         # Determine insertion index: after the heading and any existing content of that section,
         # which we define as lines until the next heading (line starting with '#').
